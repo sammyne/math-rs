@@ -1,67 +1,88 @@
-use num_bigint::{BigInt, Sign};
-pub use num_integer::{ExtendedGcd, Integer};
+use crate::big::nat::nat;
 
-pub type Int = BigInt;
-
-/// Extended specifies more API to extend BigInt.
-pub trait Extended {
-    /// euclidean_modulus calculates the modulus x%y for y != 0. If y == 0, a division-by-zero
-    /// run-time panic occurs.
-    /// Alias to Int.Mod in Go.
-    fn euclidean_modulus(x: &Int, y: &Int) -> Int;
-    /// mod_inverse calculates the multiplicative inverse of g in the ring ℤ/nℤ. If g and n are not
-    /// relatively prime, g has no multiplicative inverse in the ring ℤ/nℤ. In this case, the
-    /// return value is None.
-    fn mod_inverse(g: &Int, n: &Int) -> Option<Int>;
-    /// from_string makes a Int out of the value of s, interpreted in the given base, and returns
-    /// the resultant Int. The entire string (not just a prefix) must be valid for success. If
-    /// from_string fails, the returned value is None.
-    /// Alias to Int.SetString in Go.
-    fn from_string(s: &str, base: isize) -> Option<Int>;
+lazy_static::lazy_static! {
+  static ref INT_ONE: Int= Int{
+    neg:false,
+    abs:nat::one(),
+  };
 }
 
-impl Extended for Int {
-    fn euclidean_modulus(x: &Int, y: &Int) -> Int {
-        let z = x % y;
-        match z.sign() {
-            Sign::Minus => match y.sign() {
-                Sign::Minus => z - y,
-                _ => z + y,
-            },
-            _ => z,
-        }
-    }
-    fn mod_inverse(g: &Int, n: &Int) -> Option<Int> {
-        let n = match n.sign() {
-            Sign::Minus => -n.clone(),
-            _ => n.clone(),
-        };
-        let g = match g.sign() {
-            Sign::Minus => Int::euclidean_modulus(&g, &n),
-            _ => g.clone(),
-        };
-
-        let ExtendedGcd { gcd, x, .. } = g.extended_gcd(&n);
-
-        if gcd != one() {
-            return None;
-        }
-
-        match x.sign() {
-            Sign::Minus => Some(x + n),
-            _ => Some(x),
-        }
-    }
-
-    fn from_string(s: &str, base: isize) -> Option<Int> {
-        Int::parse_bytes(s.as_bytes(), base as u32)
-    }
+pub struct Int {
+    neg: bool,
+    abs: nat,
 }
 
-pub fn one() -> Int {
-    Int::from(1u8)
-}
+impl Int {
+    /// abs sets self to |x| (the absolute value of x) and returns self.
+    pub fn abs(&mut self, x: &Self) -> &mut Self {
+        self.set(x);
+        self.neg = false;
 
-pub fn zero() -> Int {
-    Int::from(0u8)
+        self
+    }
+
+    pub fn add(&mut self, x: &Self, y: &Self) -> &mut Self {
+        let mut neg = x.neg;
+        if x.neg == y.neg {
+            // x + y == x + y
+            // (-x) + (-y) == -(x + y)
+            self.abs.add(&x.abs, &y.abs);
+        } else {
+            // x + (-y) == x - y == -(y - x)
+            // (-x) + y == y - x == -(x - y)
+            if x.abs.cmp(&y.abs) >= 0 {
+                self.abs.sub(&x.abs, &y.abs);
+            } else {
+                neg = !neg;
+                self.abs.sub(&y.abs, &x.abs);
+            }
+        }
+
+        self.neg = (self.abs.0.len() > 0) && neg;
+
+        self
+    }
+
+    /*
+    pub fn and_not(&mut self, x: &Self, y: &Self) -> Self {
+        todo!()
+    }
+
+    pub fn append<'a>(&'a mut self, buf: &[u8], base: i32) -> &'a [u8] {
+        todo!()
+    }
+
+    pub fn binomial(&mut self, n: i64, k: i64) -> &mut Self {
+        todo!()
+    }
+
+    pub fn bit(&self, i: usize) -> usize {
+        todo!()
+    }
+
+    pub fn bit_len(&self) -> usize {
+        todo!()
+    }
+
+    pub fn bits(&self) -> Vec<Word> {
+        todo!()
+    }
+
+    pub fn bytes(&self) -> &[u8] {
+        todo!()
+    }
+    */
+
+    pub fn set(&mut self, x: &Self) -> &mut Self {
+        if !std::ptr::eq(self, x) {
+            self.abs.set(&x.abs);
+            self.neg = x.neg;
+        }
+
+        self
+    }
+
+    pub fn new(_x: i64) -> Self {
+        todo!()
+    }
 }
