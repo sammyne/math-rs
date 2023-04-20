@@ -1,6 +1,6 @@
-mod arith;
+//mod arith;
 mod int;
-mod nat;
+//mod nat;
 
 pub use int::*;
 

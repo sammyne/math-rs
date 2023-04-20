@@ -611,6 +611,7 @@ pub fn jacobi(x: &Int, y: &Int) -> i32 {
     );
 
     let (mut a, mut b) = (x.0.clone(), y.0.clone());
+    #[allow(unused_assignments)]
     let mut c = BigInt::zero();
     let mut j = 1;
 
