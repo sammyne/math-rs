@@ -4,12 +4,15 @@ on:
   push:
     branches:
     - main
+    types:
+    - closed
 
 jobs:
   docify:
     runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
     container: 
-      image: rust:1.63.0-bullseye
+      image: rust:1.68.2-bullseye
 
     steps:
     - uses: actions/checkout@v3
