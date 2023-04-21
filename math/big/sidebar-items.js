@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["Int",""]],"type":[["Word",""]]};
+window.SIDEBAR_ITEMS = {"fn":[["jacobi",""]],"struct":[["Int",""]],"type":[["Word",""]]};

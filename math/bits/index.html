@@ -5,7 +5,7 @@
         </a><h2 class="location"><a href="#">Module bits</a></h2><div class="sidebar-elems"><section><div class="block"><ul><li><a href="#constants">Constants</a></li><li><a href="#functions">Functions</a></li></ul></div></section></div></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../math/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><button type="button" id="help-button" title="help">?</button><div id="settings-menu" tabindex="-1">
                                 <a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div>
                         </div></form></nav></div><section id="main-content" class="content"><div class="main-heading">
-    <h1 class="fqn"><span class="in-band">Module <a href="../index.html">math</a>::<wbr><a class="mod" href="#">bits</a><button id="copy-path" onclick="copy_path(this)" title="Copy item path to clipboard"><img src="../../clipboard.svg" width="19" height="18" alt="Copy item path"></button></span></h1><span class="out-of-band"><a class="srclink" href="../../src/math/bits/mod.rs.html#1-90">source</a> · <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class="inner">&#x2212;</span>]</a></span></div><h2 id="constants" class="small-section-header"><a href="#constants">Constants</a></h2>
+    <h1 class="fqn"><span class="in-band">Module <a href="../index.html">math</a>::<wbr><a class="mod" href="#">bits</a><button id="copy-path" onclick="copy_path(this)" title="Copy item path to clipboard"><img src="../../clipboard.svg" width="19" height="18" alt="Copy item path"></button></span></h1><span class="out-of-band"><a class="srclink" href="../../src/math/bits/mod.rs.html#1-149">source</a> · <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class="inner">&#x2212;</span>]</a></span></div><h2 id="constants" class="small-section-header"><a href="#constants">Constants</a></h2>
 <div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="constant" href="constant.UINT_SIZE.html" title="math::bits::UINT_SIZE constant">UINT_SIZE</a></div><div class="item-right docblock-short"></div></div></div><h2 id="functions" class="small-section-header"><a href="#functions">Functions</a></h2>
 <div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.add.html" title="math::bits::add fn">add</a></div><div class="item-right docblock-short"><p>add returns the sum with carry of x, y and carry: sum = x + y + carry.
 The carry input must be 0 or 1; otherwise the behavior is undefined.
@@ -16,6 +16,18 @@ The carryOut output is guaranteed to be 0 or 1.</p>
 </div></div><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.add64.html" title="math::bits::add64 fn">add64</a></div><div class="item-right docblock-short"><p>add64 returns the sum with carry of x, y and carry: sum = x + y + carry.
 The carry input must be 0 or 1; otherwise the behavior is undefined.
 The carryOut output is guaranteed to be 0 or 1.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.div.html" title="math::bits::div fn">div</a></div><div class="item-right docblock-short"><p>div returns the quotient and remainder of (hi, lo) divided by y:
+quo = (hi, lo)/y, rem = (hi, lo)%y with the dividend bits’ upper
+half in parameter hi and the lower half in parameter lo.
+div panics for y == 0 (division by zero) or y &lt;= hi (quotient overflow).</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.div32.html" title="math::bits::div32 fn">div32</a></div><div class="item-right docblock-short"><p>div32 returns the quotient and remainder of (hi, lo) divided by y:
+quo = (hi, lo)/y, rem = (hi, lo)%y with the dividend bits’ upper
+half in parameter hi and the lower half in parameter lo.
+div32 panics for y == 0 (division by zero) or y &lt;= hi (quotient overflow).</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.div64.html" title="math::bits::div64 fn">div64</a></div><div class="item-right docblock-short"><p>div64 returns the quotient and remainder of (hi, lo) divided by y:
+quo = (hi, lo)/y, rem = (hi, lo)%y with the dividend bits’ upper
+half in parameter hi and the lower half in parameter lo.
+div64 panics for y == 0 (division by zero) or y &lt;= hi (quotient overflow).</p>
 </div></div><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.sub.html" title="math::bits::sub fn">sub</a></div><div class="item-right docblock-short"><p>sub returns the difference of x, y and borrow: diff = x - y - borrow.
 The borrow input must be 0 or 1; otherwise the behavior is undefined.
 The borrowOut output is guaranteed to be 0 or 1.</p>
