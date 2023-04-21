@@ -1,17 +1,23 @@
 name: test
 
 on:
-  push:
-    branches-ignore:
-    - main
+#  push:
+#    branches-ignore:
+#    - main
   pull_request:
     branches: [ 'main' ]
+    paths:
+    - 'benches/**'
+    - 'examples/**'
+    - 'src/**'
+    - 'tests/**'
+    - Cargo.toml
 
 jobs:
   test:
     runs-on: ubuntu-latest
     container: 
-      image: rust:1.63.0-bullseye
+      image: rust:1.68.2-bullseye
 
     steps:
     - uses: actions/checkout@v3
