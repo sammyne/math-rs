@@ -19,7 +19,7 @@ lazy_static::lazy_static! {
 //    neg: bool,
 //    abs: nat,
 //}
-#[derive(Default, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Int(BigInt);
 
 impl Display for Int {
@@ -93,9 +93,9 @@ impl Int {
         self.0.abs().bits() as usize
     }
 
-    //pub fn bits(&self) -> Vec<Word> {
-    //    todo!()
-    //}
+    pub fn bits(&self) -> Box<dyn DoubleEndedIterator<Item = u64> + '_> {
+        Box::new(self.0.iter_u64_digits())
+    }
 
     pub fn bytes(&self) -> Vec<u8> {
         self.0.abs().to_signed_bytes_le()
@@ -500,6 +500,11 @@ impl Int {
 
     pub fn string(&self) -> String {
         self.to_string()
+    }
+
+    pub fn sub(&mut self, x: &Self, y: &Self) -> &mut Self {
+        self.0 = &x.0 - &y.0;
+        self
     }
 
     pub fn text(&self, base: u32) -> String {
