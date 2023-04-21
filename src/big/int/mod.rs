@@ -465,6 +465,11 @@ impl Int {
         self
     }
 
+    pub fn set_bytes(&mut self, buf: &[u8]) -> &mut Self {
+        self.0 = BigInt::from_bytes_be(Sign::Plus, buf);
+        self
+    }
+
     pub fn set_int64(&mut self, x: i64) -> &mut Self {
         self.0 = BigInt::from(x);
         self
