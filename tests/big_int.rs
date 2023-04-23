@@ -59,6 +59,123 @@ fn abs_z() {
 }
 
 #[test]
+fn binomial() {
+    struct Case {
+        n: i64,
+        k: i64,
+        want: &'static str,
+    }
+    let new_case = |n, k, want| -> Case { Case { n, k, want } };
+
+    let test_vector = vec![
+        new_case(0, 0, "1"),
+        new_case(0, 1, "0"),
+        new_case(1, 0, "1"),
+        new_case(1, 1, "1"),
+        new_case(1, 10, "0"),
+        new_case(4, 0, "1"),
+        new_case(4, 1, "4"),
+        new_case(4, 2, "6"),
+        new_case(4, 3, "4"),
+        new_case(4, 4, "1"),
+        new_case(10, 1, "10"),
+        new_case(10, 9, "10"),
+        new_case(10, 5, "252"),
+        new_case(11, 5, "462"),
+        new_case(11, 6, "462"),
+        new_case(100, 10, "17310309456440"),
+        new_case(100, 90, "17310309456440"),
+        new_case(1000, 10, "263409560461970212832400"),
+        new_case(1000, 990, "263409560461970212832400"),
+    ];
+
+    let mut z = Int::default();
+    for c in test_vector {
+        let got = z.binomial(c.n, c.k).to_string();
+        assert_eq!(c.want, got, "binomial({},{})", c.n, c.k);
+    }
+}
+
+#[test]
+fn division_signs() {
+    struct Case {
+        x: i64,
+        y: i64,
+        q: i64,
+        r: i64,
+        d: i64,
+        m: i64,
+    }
+
+    let new_case = |x, y, q, r, d, m| Case { x, y, q, r, d, m };
+
+    let test_vector = vec![
+        new_case(5, 3, 1, 2, 1, 2),
+        new_case(-5, 3, -1, -2, -2, 1),
+        new_case(5, -3, -1, 2, -1, 2),
+        new_case(-5, -3, 1, -2, 2, 1),
+        new_case(1, 2, 0, 1, 0, 1),
+        new_case(8, 4, 2, 0, 2, 0),
+    ];
+
+    for (i, c) in test_vector.iter().enumerate() {
+        let x = Int::new(c.x);
+        let y = Int::new(c.y);
+        let q = Int::new(c.q);
+        let r = Int::new(c.r);
+        let d = Int::new(c.d);
+        let m = Int::new(c.m);
+
+        let mut q1 = Int::default();
+        q1.quo(&x, &y);
+
+        let mut r1 = Int::default();
+        r1.rem(&x, &y);
+
+        assert!(is_normalized(&q1), "#{i} quo: {q1} is not normalized");
+        assert!(is_normalized(&r1), "#{i} rem: {r1} is not normalized");
+        assert!(
+            (q1 == q) && (r1 == r),
+            "#{i} quo/rem: got ({q1}, {r1}), want ({q}, {r})"
+        );
+
+        let mut q2 = Int::default();
+        let mut r2 = Int::default();
+        q2.quo_rem(&x, &y, &mut r2);
+
+        assert!(is_normalized(&q2), "#{i} quo: {q2} is not normalized");
+        assert!(is_normalized(&r2), "#{i} rem: {r2} is not normalized");
+        assert!(
+            (q2 == q) && (r2 == r),
+            "#{i} quo_rem: got ({q2}, {r2}), want ({q}, {r})"
+        );
+
+        let mut d1 = Int::default();
+        let mut m1 = Int::default();
+        d1.div(&x, &y);
+        m1.r#mod(&x, &y);
+
+        assert!(is_normalized(&d1), "#{i} div: {d1} is not normalized");
+        assert!(is_normalized(&m1), "#{i} mod: {m1} is not normalized");
+        assert!(
+            (d1 == d) && (m1 == m),
+            "#{i} div/mod: got ({d1}, {m1}), want ({d}, {m})"
+        );
+
+        let mut d2 = Int::default();
+        let mut m2 = Int::default();
+        d2.div_mod(&x, &y, &mut m2);
+
+        assert!(is_normalized(&d2), "#{i} div: {d2} is not normalized");
+        assert!(is_normalized(&m2), "#{i} mod: {m2} is not normalized");
+        assert!(
+            (d2 == d) && (m2 == m),
+            "#{i} div_mod: got ({d2}, {m2}), want ({d}, {m})"
+        );
+    }
+}
+
+#[test]
 fn mul() {
     let n = randn(128, 256);
     for _ in 0..n {
