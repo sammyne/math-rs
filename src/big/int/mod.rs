@@ -71,7 +71,7 @@ impl Int {
         let n = BigInt::from(n);
         let k = BigInt::from(k);
         let mut z = INT_ONE.0.clone();
-        while i <= k {
+        while i < k {
             z *= &n - &i;
             i += 1;
             z /= &i;
@@ -125,15 +125,41 @@ impl Int {
 
     pub fn div(&mut self, x: &Self, y: &Self) -> &mut Self {
         assert!(!y.0.is_zero(), "y mustn't be 0");
-        self.0 = x.0.clone() / y.0.clone();
+
+        let mut r = Int::default();
+        self.quo_rem(x, y, &mut r);
+
+        if r.sign() < 0 {
+            if y.sign() < 0 {
+                self.0 += &INT_ONE.0;
+            } else {
+                self.0 -= &INT_ONE.0;
+            }
+        }
+
         self
     }
 
-    pub fn div_mod(&mut self, x: &Self, y: &Self) -> (&mut Self, Self) {
+    pub fn div_mod<'a, 'b>(
+        &'a mut self,
+        x: &Self,
+        y: &Self,
+        m: &'b mut Self,
+    ) -> (&'a mut Self, &'b mut Self) {
         assert!(!y.0.is_zero(), "y mustn't be 0");
         self.0 = &x.0 / &y.0;
 
-        let m = Self(&x.0 % &y.0);
+        self.quo_rem(x, y, m);
+        if m.sign() < 0 {
+            if y.sign() < 0 {
+                self.0 += &INT_ONE.0;
+                m.0 -= &y.0;
+            } else {
+                self.0 -= &INT_ONE.0;
+                m.0 += &y.0;
+            }
+        }
+
         (self, m)
     }
 
@@ -236,7 +262,17 @@ impl Int {
     pub fn r#mod(&mut self, x: &Self, y: &Self) -> &mut Self {
         assert!(!y.0.is_zero(), "y mustn't be 0");
 
-        self.0 = &x.0 % &y.0;
+        let mut q = Int::default();
+        q.quo_rem(x, y, self);
+
+        if self.sign() < 0 {
+            if y.sign() < 0 {
+                self.0 -= &y.0;
+            } else {
+                self.0 += &y.0;
+            }
+        }
+
         self
     }
 
