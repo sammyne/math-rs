@@ -673,6 +673,42 @@
 <a href="#673" id="673">673</a>
 <a href="#674" id="674">674</a>
 <a href="#675" id="675">675</a>
+<a href="#676" id="676">676</a>
+<a href="#677" id="677">677</a>
+<a href="#678" id="678">678</a>
+<a href="#679" id="679">679</a>
+<a href="#680" id="680">680</a>
+<a href="#681" id="681">681</a>
+<a href="#682" id="682">682</a>
+<a href="#683" id="683">683</a>
+<a href="#684" id="684">684</a>
+<a href="#685" id="685">685</a>
+<a href="#686" id="686">686</a>
+<a href="#687" id="687">687</a>
+<a href="#688" id="688">688</a>
+<a href="#689" id="689">689</a>
+<a href="#690" id="690">690</a>
+<a href="#691" id="691">691</a>
+<a href="#692" id="692">692</a>
+<a href="#693" id="693">693</a>
+<a href="#694" id="694">694</a>
+<a href="#695" id="695">695</a>
+<a href="#696" id="696">696</a>
+<a href="#697" id="697">697</a>
+<a href="#698" id="698">698</a>
+<a href="#699" id="699">699</a>
+<a href="#700" id="700">700</a>
+<a href="#701" id="701">701</a>
+<a href="#702" id="702">702</a>
+<a href="#703" id="703">703</a>
+<a href="#704" id="704">704</a>
+<a href="#705" id="705">705</a>
+<a href="#706" id="706">706</a>
+<a href="#707" id="707">707</a>
+<a href="#708" id="708">708</a>
+<a href="#709" id="709">709</a>
+<a href="#710" id="710">710</a>
+<a href="#711" id="711">711</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::{
     fmt::Display,
     ops::{Neg, Not, Shr},
@@ -746,7 +782,7 @@
         <span class="kw">let </span>n = BigInt::from(n);
         <span class="kw">let </span>k = BigInt::from(k);
         <span class="kw">let </span><span class="kw-2">mut </span>z = INT_ONE.<span class="number">0</span>.clone();
-        <span class="kw">while </span>i &lt;= k {
+        <span class="kw">while </span>i &lt; k {
             z <span class="kw-2">*</span>= <span class="kw-2">&amp;</span>n - <span class="kw-2">&amp;</span>i;
             i += <span class="number">1</span>;
             z /= <span class="kw-2">&amp;</span>i;
@@ -800,15 +836,41 @@
 
     <span class="kw">pub fn </span>div(<span class="kw-2">&amp;mut </span><span class="self">self</span>, x: <span class="kw-2">&amp;</span><span class="self">Self</span>, y: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="kw-2">&amp;mut </span><span class="self">Self </span>{
         <span class="macro">assert!</span>(!y.<span class="number">0</span>.is_zero(), <span class="string">&quot;y mustn&#39;t be 0&quot;</span>);
-        <span class="self">self</span>.<span class="number">0 </span>= x.<span class="number">0</span>.clone() / y.<span class="number">0</span>.clone();
+
+        <span class="kw">let </span><span class="kw-2">mut </span>r = Int::default();
+        <span class="self">self</span>.quo_rem(x, y, <span class="kw-2">&amp;mut </span>r);
+
+        <span class="kw">if </span>r.sign() &lt; <span class="number">0 </span>{
+            <span class="kw">if </span>y.sign() &lt; <span class="number">0 </span>{
+                <span class="self">self</span>.<span class="number">0 </span>+= <span class="kw-2">&amp;</span>INT_ONE.<span class="number">0</span>;
+            } <span class="kw">else </span>{
+                <span class="self">self</span>.<span class="number">0 </span>-= <span class="kw-2">&amp;</span>INT_ONE.<span class="number">0</span>;
+            }
+        }
+
         <span class="self">self
     </span>}
 
-    <span class="kw">pub fn </span>div_mod(<span class="kw-2">&amp;mut </span><span class="self">self</span>, x: <span class="kw-2">&amp;</span><span class="self">Self</span>, y: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; (<span class="kw-2">&amp;mut </span><span class="self">Self</span>, <span class="self">Self</span>) {
+    <span class="kw">pub fn </span>div_mod&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span><span class="self">self</span>,
+        x: <span class="kw-2">&amp;</span><span class="self">Self</span>,
+        y: <span class="kw-2">&amp;</span><span class="self">Self</span>,
+        m: <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span><span class="kw-2">mut </span><span class="self">Self</span>,
+    ) -&gt; (<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span><span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;b </span><span class="kw-2">mut </span><span class="self">Self</span>) {
         <span class="macro">assert!</span>(!y.<span class="number">0</span>.is_zero(), <span class="string">&quot;y mustn&#39;t be 0&quot;</span>);
         <span class="self">self</span>.<span class="number">0 </span>= <span class="kw-2">&amp;</span>x.<span class="number">0 </span>/ <span class="kw-2">&amp;</span>y.<span class="number">0</span>;
 
-        <span class="kw">let </span>m = <span class="self">Self</span>(<span class="kw-2">&amp;</span>x.<span class="number">0 </span>% <span class="kw-2">&amp;</span>y.<span class="number">0</span>);
+        <span class="self">self</span>.quo_rem(x, y, m);
+        <span class="kw">if </span>m.sign() &lt; <span class="number">0 </span>{
+            <span class="kw">if </span>y.sign() &lt; <span class="number">0 </span>{
+                <span class="self">self</span>.<span class="number">0 </span>+= <span class="kw-2">&amp;</span>INT_ONE.<span class="number">0</span>;
+                m.<span class="number">0 </span>-= <span class="kw-2">&amp;</span>y.<span class="number">0</span>;
+            } <span class="kw">else </span>{
+                <span class="self">self</span>.<span class="number">0 </span>-= <span class="kw-2">&amp;</span>INT_ONE.<span class="number">0</span>;
+                m.<span class="number">0 </span>+= <span class="kw-2">&amp;</span>y.<span class="number">0</span>;
+            }
+        }
+
         (<span class="self">self</span>, m)
     }
 
@@ -911,7 +973,17 @@
     <span class="kw">pub fn </span>r#mod(<span class="kw-2">&amp;mut </span><span class="self">self</span>, x: <span class="kw-2">&amp;</span><span class="self">Self</span>, y: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="kw-2">&amp;mut </span><span class="self">Self </span>{
         <span class="macro">assert!</span>(!y.<span class="number">0</span>.is_zero(), <span class="string">&quot;y mustn&#39;t be 0&quot;</span>);
 
-        <span class="self">self</span>.<span class="number">0 </span>= <span class="kw-2">&amp;</span>x.<span class="number">0 </span>% <span class="kw-2">&amp;</span>y.<span class="number">0</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>q = Int::default();
+        q.quo_rem(x, y, <span class="self">self</span>);
+
+        <span class="kw">if </span><span class="self">self</span>.sign() &lt; <span class="number">0 </span>{
+            <span class="kw">if </span>y.sign() &lt; <span class="number">0 </span>{
+                <span class="self">self</span>.<span class="number">0 </span>-= <span class="kw-2">&amp;</span>y.<span class="number">0</span>;
+            } <span class="kw">else </span>{
+                <span class="self">self</span>.<span class="number">0 </span>+= <span class="kw-2">&amp;</span>y.<span class="number">0</span>;
+            }
+        }
+
         <span class="self">self
     </span>}
 
