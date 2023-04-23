@@ -93,12 +93,18 @@ impl Int {
         self.0.abs().bits() as usize
     }
 
-    pub fn bits(&self) -> Box<dyn DoubleEndedIterator<Item = u64> + '_> {
-        Box::new(self.0.iter_u64_digits())
+    pub fn bits(&self) -> Box<dyn DoubleEndedIterator<Item = u32> + '_> {
+        Box::new(self.0.iter_u32_digits())
     }
 
     pub fn bytes(&self) -> Vec<u8> {
-        self.0.abs().to_signed_bytes_le()
+        let mut out = self.0.abs().to_signed_bytes_be();
+
+        if out[0] == 0 {
+            out.remove(0);
+        }
+
+        out
     }
 
     pub fn cmp(&self, y: &Self) -> i32 {

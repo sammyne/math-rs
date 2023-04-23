@@ -97,6 +97,47 @@ fn binomial() {
 }
 
 #[test]
+fn bits() {
+    let test_vector = vec![
+        vec![0u32],
+        vec![1],
+        vec![0, 1, 2, 3, 4],
+        vec![4, 3, 2, 1, 0],
+        vec![4, 3, 2, 1, 0, 0, 0, 0],
+    ];
+
+    for c in test_vector {
+        let mut z = Int::default();
+        let got = z.set_bits(c.as_slice());
+
+        assert!(got.sign() >= 0, "set_bits({c:?}): get negative result");
+
+        let want = norm(c.as_slice());
+        let got: Vec<u32> = got.bits().collect();
+        assert_eq!(got, want, "set_bits({c:?}) = {got:?}; want {want:?}");
+
+        let bits: Vec<u32> = z.bits().collect();
+        assert_eq!(
+            bits,
+            want,
+            "{:?}.bits() = {:?}; want {:?}",
+            z.bytes(),
+            bits,
+            want
+        );
+    }
+}
+
+#[test]
+fn bytes() {
+    let n = randn(128, 256);
+    for _ in 0..n {
+        let b = rand_bytes(randn(1, 64));
+        check_bytes(b.as_slice());
+    }
+}
+
+#[test]
 fn division_signs() {
     struct Case {
         x: i64,
@@ -283,6 +324,72 @@ fn prod_zz() {
 }
 
 #[test]
+fn quo() {
+    let n = randn(128, 256);
+    for _ in 0..n {
+        let a = rand_bytes(randn(1, 64));
+        let b = rand_bytes(randn(1, 64));
+        check_quo(a.as_slice(), b.as_slice());
+    }
+
+    struct Case {
+        x: &'static str,
+        y: &'static str,
+        q: &'static str,
+        r: &'static str,
+    }
+    let new_case = |x, y, q, r| Case { x, y, q, r };
+
+    let test_vector = vec![
+        new_case(
+
+            "476217953993950760840509444250624797097991362735329973741718102894495832294430498335824897858659711275234906400899559094370964723884706254265559534144986498357",
+            "9353930466774385905609975137998169297361893554149986716853295022578535724979483772383667534691121982974895531435241089241440253066816724367338287092081996",
+            "50911",
+            "1",
+        
+        ),
+       new_case( 
+            "11510768301994997771168",
+            "1328165573307167369775",
+            "8",
+            "885443715537658812968",
+       ),
+    ];
+
+    fn int_from_decimal_string(s: &str) -> Int {
+        let mut out = Int::default();
+        out.set_string(s, 10);
+        out
+    }
+
+    for (i, c) in test_vector.iter().enumerate() {
+        let x = int_from_decimal_string(c.x);
+        let y = int_from_decimal_string(c.y);
+        let expected_q = int_from_decimal_string(c.q);
+        let expected_r = int_from_decimal_string(c.r);
+
+        let mut r = Int::default();
+        let mut q = Int::default();
+        q.quo_rem(&x, &y, &mut r);
+
+        assert!(
+            (q == expected_q) && (r == expected_r),
+            "#{i} got ({q},{r}) want ({expected_q}, {expected_r})"
+        );
+    }
+}
+
+#[test]
+fn set_bytes() {
+    let n = randn(128, 256);
+    for _ in 0..n {
+        let b = rand_bytes(randn(1, 64));
+        check_set_bytes(b.as_slice());
+    }
+}
+
+#[test]
 fn set_z() {
     for a in SUM_ZZ.iter() {
         let mut z = Int::default();
@@ -328,6 +435,21 @@ fn sum_zz() {
 }
 
 // private functions
+fn check_bytes(b: &[u8]) {
+    let b = {
+        let mut v = b;
+        while (v.len() > 0) && (v[0] == 0) {
+            v = &v[1..];
+        }
+        v
+    };
+
+    let mut v = Int::default();
+    let b2 = v.set_bytes(b).bytes();
+
+    assert_eq!(b, b2.as_slice())
+}
+
 fn check_mul(a: &[u8], b: &[u8]) -> bool {
     let mut x = Int::default();
     let mut y = Int::default();
@@ -342,6 +464,55 @@ fn check_mul(a: &[u8], b: &[u8]) -> bool {
     z2.set_bytes(&mul_bytes(a, b));
 
     z1 == z2
+}
+
+fn check_quo(x: &[u8], y: &[u8]) {
+    let mut u = Int::default();
+    u.set_bytes(x);
+
+    let mut v = Int::default();
+    v.set_bytes(y);
+
+    let zero = Int::default();
+
+    if &v == &zero {
+        return;
+    }
+
+    let mut r = Int::default();
+    let mut q = Int::default();
+    q.quo_rem(&u, &v, &mut r);
+
+    assert!(r.cmp(&v) < 0, "remainder not less than divisor");
+
+    let uprime = {
+        let mut out = q.clone();
+        out.mul(&q, &v);
+
+        let vv = out.clone();
+        out.add(&vv, &r);
+
+        out
+    };
+
+    assert_eq!(uprime, u);
+}
+
+fn check_set_bytes(b: &[u8]) {
+    let b1 = {
+        let mut v = Int::default();
+        v.set_bytes(b).bytes()
+    };
+
+    fn normalize(b: &[u8]) -> &[u8] {
+        let mut out = b;
+        while (out.len() > 1) && (out[0] == 0) {
+            out = &out[1..];
+        }
+        out
+    }
+
+    assert_eq!(normalize(b1.as_slice()), normalize(b));
 }
 
 fn is_normalized(x: &Int) -> bool {
@@ -380,6 +551,15 @@ fn mul_bytes(x: &[u8], y: &[u8]) -> Vec<u8> {
     let (_, b) = z.split_at(i);
 
     b.to_vec()
+}
+
+fn norm(x: &[u32]) -> Vec<u32> {
+    let mut i = x.len();
+    while (i > 0) && (x[i - 1] == 0) {
+        i -= 1;
+    }
+
+    x[..i].to_vec()
 }
 
 fn rand_bytes(n: usize) -> Vec<u8> {
