@@ -97,6 +97,42 @@ fn binomial() {
 }
 
 #[test]
+fn bit_len() {
+    struct Case {
+        input: &'static str,
+        out: usize,
+    }
+
+    let new_case = |input, out| Case { input, out };
+
+    let test_vector = vec![
+        new_case("-1", 1),
+        new_case("0", 0),
+        new_case("1", 1),
+        new_case("2", 2),
+        new_case("4", 3),
+        new_case("0xabc", 12),
+        new_case("0x8000", 16),
+        new_case("0x80000000", 32),
+        new_case("0x800000000000", 48),
+        new_case("0x8000000000000000", 64),
+        new_case("0x80000000000000000000", 80),
+        new_case("-0x4000000000000000000000", 87),
+    ];
+
+    for (i, c) in test_vector.iter().enumerate() {
+        let mut x = Int::default();
+        assert!(
+            x.set_string(c.input, 0).is_some(),
+            "#{i} set_string({}, 0)",
+            c.input
+        );
+
+        assert_eq!(x.bit_len(), c.out, "#{i} bit_len");
+    }
+}
+
+#[test]
 fn bits() {
     let test_vector = vec![
         vec![0u32],
@@ -108,13 +144,14 @@ fn bits() {
 
     for c in test_vector {
         let mut z = Int::default();
+
         let got = z.set_bits(c.as_slice());
 
         assert!(got.sign() >= 0, "set_bits({c:?}): get negative result");
 
         let want = norm(c.as_slice());
         let got: Vec<u32> = got.bits().collect();
-        assert_eq!(got, want, "set_bits({c:?}) = {got:?}; want {want:?}");
+        assert_eq!(got, want, "set_bits({c:?})");
 
         let bits: Vec<u32> = z.bits().collect();
         assert_eq!(
@@ -342,15 +379,12 @@ fn quo() {
 
     let test_vector = vec![
         new_case(
-
             "476217953993950760840509444250624797097991362735329973741718102894495832294430498335824897858659711275234906400899559094370964723884706254265559534144986498357",
             "9353930466774385905609975137998169297361893554149986716853295022578535724979483772383667534691121982974895531435241089241440253066816724367338287092081996",
             "50911",
             "1",
-        
         ),
-       new_case( 
-            "11510768301994997771168",
+       new_case("11510768301994997771168",
             "1328165573307167369775",
             "8",
             "885443715537658812968",
@@ -378,6 +412,41 @@ fn quo() {
             "#{i} got ({q},{r}) want ({expected_q}, {expected_r})"
         );
     }
+}
+
+#[test]
+fn quo_step_d6() {
+    let u = {
+        let mut v = Int::default();
+
+        let abs = [0, 0, 0, 0, 1, 1 << 31, u32::MAX, u32::MAX ^ (1 << 31)];
+
+        v.set_bits(&abs);
+        v
+    };
+
+    let v = {
+        let mut v = Int::default();
+
+        let abs = [5, 0, 2, 1 << 31, 0, 1 << 31];
+
+        v.set_bits(&abs);
+        v
+    };
+
+    let mut r = Int::default();
+    let mut q = Int::default();
+    q.quo_rem(&u, &v, &mut r);
+
+    const EXPECTED_Q64: &'static str = "18446744073709551613";
+    const EXPECTED_R64: &'static str = "3138550867693340382088035895064302439801311770021610913807";
+    //const EXPECTED_Q32: &'static str = "4294967293";
+    //const EXPECTED_R32: &'static str = "39614081266355540837921718287";
+
+    assert_eq!(q.to_string(), EXPECTED_Q64, "bad q64");
+    //assert_eq!(q.to_string(), EXPECTED_Q32, "bad q32");
+    assert_eq!(r.to_string(), EXPECTED_R64, "bad r64");
+    //assert_eq!(r.to_string(), EXPECTED_R32, "bad r32");
 }
 
 #[test]
