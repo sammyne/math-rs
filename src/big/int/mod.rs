@@ -518,7 +518,37 @@ impl Int {
     }
 
     pub fn set_string(&mut self, s: &str, base: u8) -> Option<&mut Self> {
-        self.0 = BigInt::parse_bytes(s.as_bytes(), base as u32)?;
+        let (s, sign) = if let Some(ss) = s.strip_prefix('-') {
+            (ss, Sign::Minus)
+        } else {
+            (s, Sign::Plus)
+        };
+
+        if base != 0 {
+            let v = BigInt::parse_bytes(s.as_bytes(), base as u32)?;
+            self.0 = if sign != Sign::Minus { v } else { v.neg() };
+            return Some(self);
+        }
+
+        let (s, base) = if let Some(s) = s.strip_prefix("0b") {
+            (s, 2)
+        } else if let Some(s) = s.strip_prefix("0B") {
+            (s, 2)
+        } else if let Some(s) = s.strip_prefix("0o") {
+            (s, 8)
+        } else if let Some(s) = s.strip_prefix("0O") {
+            (s, 8)
+        } else if let Some(s) = s.strip_prefix("0x") {
+            (s, 16)
+        } else if let Some(s) = s.strip_prefix("0X") {
+            (s, 16)
+        } else {
+            (s, 10)
+        };
+
+        let v = BigInt::parse_bytes(s.as_bytes(), base as u32)?;
+        self.0 = if sign != Sign::Minus { v } else { v.neg() };
+
         Some(self)
     }
 
