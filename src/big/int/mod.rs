@@ -5,7 +5,7 @@ use std::{
 
 use num_bigint::{BigInt, Sign};
 use num_integer::Integer;
-use num_traits::{One, Signed, Zero};
+use num_traits::{One, Pow, Signed, Zero};
 
 lazy_static::lazy_static! {
   static ref INT_ONE: Int = Int(BigInt::from(1i8));
@@ -170,25 +170,37 @@ impl Int {
     }
 
     pub fn exp(&mut self, x: &Self, y: &Self, m: Option<&Self>) -> Option<&mut Self> {
-        let mut xx = x.0.abs();
+        let mut xx = x.0.clone();
 
         if y.0.is_negative() {
             let mm = match &m {
-                None => return None,
-                Some(v) if v.0.is_zero() => return None,
+                None => {
+                    self.0 = INT_ONE.0.clone();
+                    return Some(self);
+                }
+                Some(v) if v.0.is_zero() => {
+                    self.0 = INT_ONE.0.clone();
+                    return Some(self);
+                }
                 Some(v) => *v,
             };
 
             match Self::default().mod_inverse(x, mm) {
-                None => return None,
+                None => {
+                    println!("hello");
+                    return None;
+                }
                 Some(v) => xx = v.0.abs(),
             }
         }
-
         let yy = y.0.abs();
+
         let mm = match m {
-            Some(v) => v.0.abs(),
-            None => BigInt::zero(),
+            Some(v) if !v.0.is_zero() => v.0.abs(),
+            _ => {
+                self.0 = xx.pow(yy.to_biguint().expect("as BigUint"));
+                return Some(self);
+            }
         };
 
         self.0 = xx.modpow(&yy, &mm);
@@ -298,7 +310,7 @@ impl Int {
 
         d.gcd(Some(&mut x), None, &g, &n);
 
-        if d == *INT_ONE {
+        if d != *INT_ONE {
             return None;
         }
 
