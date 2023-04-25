@@ -3,13 +3,30 @@ use math::big::Int;
 mod helper;
 
 lazy_static::lazy_static! {
-  static ref SUM_ZZ: Vec<ArgZz> = vec![
-    ArgZz::new(Int::new(0), Int::new(0), Int::new(0)),
-    ArgZz::new(Int::new(1), Int::new(1), Int::new(0)),
-    ArgZz::new(Int::new(1111111110), Int::new(123456789), Int::new(987654321)),
-    ArgZz::from_i64s(-1, -1, 0),
-    ArgZz::from_i64s(864197532, -123456789, 987654321),
-    ArgZz::from_i64s(-1111111110, -123456789, -987654321),
+  static ref LSH_TESTS: Vec<IntShiftTest> = vec![
+    IntShiftTest::new("0", 0, "0"),
+    IntShiftTest::new("0", 1, "0"),
+    IntShiftTest::new("0", 2, "0"),
+    IntShiftTest::new("1", 0, "1"),
+    IntShiftTest::new("1", 1, "2"),
+    IntShiftTest::new("1", 2, "4"),
+    IntShiftTest::new("2", 0, "2"),
+    IntShiftTest::new("2", 1, "4"),
+    IntShiftTest::new("2", 2, "8"),
+    IntShiftTest::new("-87", 1, "-174"),
+    IntShiftTest::new("4294967296", 0, "4294967296"),
+    IntShiftTest::new("4294967296", 1, "8589934592"),
+    IntShiftTest::new("4294967296", 2, "17179869184"),
+    IntShiftTest::new("18446744073709551616", 0, "18446744073709551616"),
+    IntShiftTest::new("9223372036854775808", 1, "18446744073709551616"),
+    IntShiftTest::new("4611686018427387904", 2, "18446744073709551616"),
+    IntShiftTest::new("1", 64, "18446744073709551616"),
+    IntShiftTest::new(
+        "18446744073709551616",
+        64,
+        "340282366920938463463374607431768211456",
+    ),
+    IntShiftTest::new("1", 128, "340282366920938463463374607431768211456"),
   ];
 
   static ref PROD_ZZ: Vec<ArgZz> = vec![
@@ -17,6 +34,46 @@ lazy_static::lazy_static! {
     ArgZz::from_i64s(0, 1, 0),
     ArgZz::from_i64s(1, 1, 1),
     ArgZz::from_i64s(-991*991, 991, -991),
+  ];
+
+  static ref RSH_TESTS: Vec<IntShiftTest> = vec![
+    IntShiftTest::new("0", 0, "0"),
+    IntShiftTest::new("-0", 0, "0"),
+    IntShiftTest::new("0", 1, "0"),
+    IntShiftTest::new("0", 2, "0"),
+    IntShiftTest::new("1", 0, "1"),
+    IntShiftTest::new("1", 1, "0"),
+    IntShiftTest::new("1", 2, "0"),
+    IntShiftTest::new("2", 0, "2"),
+    IntShiftTest::new("2", 1, "1"),
+    IntShiftTest::new("-1", 0, "-1"),
+    IntShiftTest::new("-1", 1, "-1"),
+    IntShiftTest::new("-1", 10, "-1"),
+    IntShiftTest::new("-100", 2, "-25"),
+    IntShiftTest::new("-100", 3, "-13"),
+    IntShiftTest::new("-100", 100, "-1"),
+    IntShiftTest::new("4294967296", 0, "4294967296"),
+    IntShiftTest::new("4294967296", 1, "2147483648"),
+    IntShiftTest::new("4294967296", 2, "1073741824"),
+    IntShiftTest::new("18446744073709551616", 0, "18446744073709551616"),
+    IntShiftTest::new("18446744073709551616", 1, "9223372036854775808"),
+    IntShiftTest::new("18446744073709551616", 2, "4611686018427387904"),
+    IntShiftTest::new("18446744073709551616", 64, "1"),
+    IntShiftTest::new(
+        "340282366920938463463374607431768211456",
+        64,
+        "18446744073709551616",
+    ),
+    IntShiftTest::new("340282366920938463463374607431768211456", 128, "1"),
+  ];
+
+  static ref SUM_ZZ: Vec<ArgZz> = vec![
+    ArgZz::new(Int::new(0), Int::new(0), Int::new(0)),
+    ArgZz::new(Int::new(1), Int::new(1), Int::new(0)),
+    ArgZz::new(Int::new(1111111110), Int::new(123456789), Int::new(987654321)),
+    ArgZz::from_i64s(-1, -1, 0),
+    ArgZz::from_i64s(864197532, -123456789, 987654321),
+    ArgZz::from_i64s(-1111111110, -123456789, -987654321),
   ];
 }
 
@@ -38,6 +95,18 @@ impl ArgZz {
             x: Int::new(x),
             y: Int::new(y),
         }
+    }
+}
+
+struct IntShiftTest {
+    input: &'static str,
+    shift: usize,
+    out: &'static str,
+}
+
+impl IntShiftTest {
+    fn new(input: &'static str, shift: usize, out: &'static str) -> Self {
+        Self { input, shift, out }
     }
 }
 
@@ -254,6 +323,286 @@ fn division_signs() {
 }
 
 #[test]
+fn exp() {
+    struct Case {
+        x: &'static str,
+        y: &'static str,
+        m: &'static str,
+        out: &'static str,
+    }
+    let new_case = |x, y, m, out| Case { x, y, m, out };
+
+    let test_vector = vec![
+    // y <= 0
+	new_case("0", "0", "", "1"),
+	new_case("1", "0", "", "1"),
+	new_case("-10", "0", "", "1"),
+	new_case("1234", "-1", "", "1"),
+	new_case("1234", "-1", "0", "1"),
+	new_case("17", "-100", "1234", "865"),
+	new_case("2", "-100", "1234", ""),
+
+	// m == 1
+	new_case("0", "0", "1", "0"),
+	new_case("1", "0", "1", "0"),
+	new_case("-10", "0", "1", "0"),
+	new_case("1234", "-1", "1", "0"),
+
+	// misc
+	new_case("5", "1", "3", "2"),
+	new_case("5", "-7", "", "1"),
+	new_case("-5", "-7", "", "1"),
+	new_case("5", "0", "", "1"),
+	new_case("-5", "0", "", "1"),
+	new_case("5", "1", "", "5"),
+	new_case("-5", "1", "", "-5"),
+	new_case("-5", "1", "7", "2"),
+	new_case("-2", "3", "2", "0"),
+	new_case("5", "2", "", "25"),
+	new_case("1", "65537", "2", "1"),
+	new_case("0x8000000000000000", "2", "", "0x40000000000000000000000000000000"),
+	new_case("0x8000000000000000", "2", "6719", "4944"),
+	new_case("0x8000000000000000", "3", "6719", "5447"),
+	new_case("0x8000000000000000", "1000", "6719", "1603"),
+	new_case("0x8000000000000000", "1000000", "6719", "3199"),
+	new_case("0x8000000000000000", "-1000000", "6719", "3663"), // 3663 = ModInverse(3199, 6719) Issue #25865
+
+	new_case("0xffffffffffffffffffffffffffffffff", "0x12345678123456781234567812345678123456789", "0x01112222333344445555666677778889", "0x36168FA1DB3AAE6C8CE647E137F97A"),
+
+new_case(	
+		"2938462938472983472983659726349017249287491026512746239764525612965293865296239471239874193284792387498274256129746192347",
+		"298472983472983471903246121093472394872319615612417471234712061",
+		"29834729834729834729347290846729561262544958723956495615629569234729836259263598127342374289365912465901365498236492183464",
+		"23537740700184054162508175125554701713153216681790245129157191391322321508055833908509185839069455749219131480588829346291",
+),
+	// test case for issue 8822
+new_case(	
+		"11001289118363089646017359372117963499250546375269047542777928006103246876688756735760905680604646624353196869572752623285140408755420374049317646428185270079555372763503115646054602867593662923894140940837479507194934267532831694565516466765025434902348314525627418515646588160955862839022051353653052947073136084780742729727874803457643848197499548297570026926927502505634297079527299004267769780768565695459945235586892627059178884998772989397505061206395455591503771677500931269477503508150175717121828518985901959919560700853226255420793148986854391552859459511723547532575574664944815966793196961286234040892865",
+		"0xB08FFB20760FFED58FADA86DFEF71AD72AA0FA763219618FE022C197E54708BB1191C66470250FCE8879487507CEE41381CA4D932F81C2B3F1AB20B539D50DCD",
+		"0xAC6BDB41324A9A9BF166DE5E1389582FAF72B6651987EE07FC3192943DB56050A37329CBB4A099ED8193E0757767A13DD52312AB4B03310DCD7F48A9DA04FD50E8083969EDB767B0CF6095179A163AB3661A05FBD5FAAAE82918A9962F0B93B855F97993EC975EEAA80D740ADBF4FF747359D041D5C33EA71D281E446B14773BCA97B43A23FB801676BD207A436C6481F1D2B9078717461A5B9D32E688F87748544523B524B0D57D5EA77A2775D2ECFA032CFBDBF52FB3786160279004E57AE6AF874E7303CE53299CCC041C7BC308D82A5698F3A8D0C38271AE35F8E9DBFBB694B5C803D89F7AE435DE236D525F54759B65E372FCD68EF20FA7111F9E4AFF73",
+		"21484252197776302499639938883777710321993113097987201050501182909581359357618579566746556372589385361683610524730509041328855066514963385522570894839035884713051640171474186548713546686476761306436434146475140156284389181808675016576845833340494848283681088886584219750554408060556769486628029028720727393293111678826356480455433909233520504112074401376133077150471237549474149190242010469539006449596611576612573955754349042329130631128234637924786466585703488460540228477440853493392086251021228087076124706778899179648655221663765993962724699135217212118535057766739392069738618682722216712319320435674779146070442",
+),
+new_case(	
+		"-0x1BCE04427D8032319A89E5C4136456671AC620883F2C4139E57F91307C485AD2D6204F4F87A58262652DB5DBBAC72B0613E51B835E7153BEC6068F5C8D696B74DBD18FEC316AEF73985CF0475663208EB46B4F17DD9DA55367B03323E5491A70997B90C059FB34809E6EE55BCFBD5F2F52233BFE62E6AA9E4E26A1D4C2439883D14F2633D55D8AA66A1ACD5595E778AC3A280517F1157989E70C1A437B849F1877B779CC3CDDEDE2DAA6594A6C66D181A00A5F777EE60596D8773998F6E988DEAE4CCA60E4DDCF9590543C89F74F603259FCAD71660D30294FBBE6490300F78A9D63FA660DC9417B8B9DDA28BEB3977B621B988E23D4D954F322C3540541BC649ABD504C50FADFD9F0987D58A2BF689313A285E773FF02899A6EF887D1D4A0D2",
+		"0xB08FFB20760FFED58FADA86DFEF71AD72AA0FA763219618FE022C197E54708BB1191C66470250FCE8879487507CEE41381CA4D932F81C2B3F1AB20B539D50DCD",
+		"0xAC6BDB41324A9A9BF166DE5E1389582FAF72B6651987EE07FC3192943DB56050A37329CBB4A099ED8193E0757767A13DD52312AB4B03310DCD7F48A9DA04FD50E8083969EDB767B0CF6095179A163AB3661A05FBD5FAAAE82918A9962F0B93B855F97993EC975EEAA80D740ADBF4FF747359D041D5C33EA71D281E446B14773BCA97B43A23FB801676BD207A436C6481F1D2B9078717461A5B9D32E688F87748544523B524B0D57D5EA77A2775D2ECFA032CFBDBF52FB3786160279004E57AE6AF874E7303CE53299CCC041C7BC308D82A5698F3A8D0C38271AE35F8E9DBFBB694B5C803D89F7AE435DE236D525F54759B65E372FCD68EF20FA7111F9E4AFF73",
+		"21484252197776302499639938883777710321993113097987201050501182909581359357618579566746556372589385361683610524730509041328855066514963385522570894839035884713051640171474186548713546686476761306436434146475140156284389181808675016576845833340494848283681088886584219750554408060556769486628029028720727393293111678826356480455433909233520504112074401376133077150471237549474149190242010469539006449596611576612573955754349042329130631128234637924786466585703488460540228477440853493392086251021228087076124706778899179648655221663765993962724699135217212118535057766739392069738618682722216712319320435674779146070442",
+),
+
+	// test cases for issue 13907
+	new_case("0xffffffff00000001", "0xffffffff00000001", "0xffffffff00000001", "0"),
+	new_case("0xffffffffffffffff00000001", "0xffffffffffffffff00000001", "0xffffffffffffffff00000001", "0"),
+	new_case("0xffffffffffffffffffffffff00000001", "0xffffffffffffffffffffffff00000001", "0xffffffffffffffffffffffff00000001", "0"),
+	new_case("0xffffffffffffffffffffffffffffffff00000001", "0xffffffffffffffffffffffffffffffff00000001", "0xffffffffffffffffffffffffffffffff00000001", "0"),
+
+	new_case(
+		"2",
+		"0xB08FFB20760FFED58FADA86DFEF71AD72AA0FA763219618FE022C197E54708BB1191C66470250FCE8879487507CEE41381CA4D932F81C2B3F1AB20B539D50DCD",
+		"0xAC6BDB41324A9A9BF166DE5E1389582FAF72B6651987EE07FC3192943DB56050A37329CBB4A099ED8193E0757767A13DD52312AB4B03310DCD7F48A9DA04FD50E8083969EDB767B0CF6095179A163AB3661A05FBD5FAAAE82918A9962F0B93B855F97993EC975EEAA80D740ADBF4FF747359D041D5C33EA71D281E446B14773BCA97B43A23FB801676BD207A436C6481F1D2B9078717461A5B9D32E688F87748544523B524B0D57D5EA77A2775D2ECFA032CFBDBF52FB3786160279004E57AE6AF874E7303CE53299CCC041C7BC308D82A5698F3A8D0C38271AE35F8E9DBFBB694B5C803D89F7AE435DE236D525F54759B65E372FCD68EF20FA7111F9E4AFF73", // odd
+		"0x6AADD3E3E424D5B713FCAA8D8945B1E055166132038C57BBD2D51C833F0C5EA2007A2324CE514F8E8C2F008A2F36F44005A4039CB55830986F734C93DAF0EB4BAB54A6A8C7081864F44346E9BC6F0A3EB9F2C0146A00C6A05187D0C101E1F2D038CDB70CB5E9E05A2D188AB6CBB46286624D4415E7D4DBFAD3BCC6009D915C406EED38F468B940F41E6BEDC0430DD78E6F19A7DA3A27498A4181E24D738B0072D8F6ADB8C9809A5B033A09785814FD9919F6EF9F83EEA519BEC593855C4C10CBEEC582D4AE0792158823B0275E6AEC35242740468FAF3D5C60FD1E376362B6322F78B7ED0CA1C5BBCD2B49734A56C0967A1D01A100932C837B91D592CE08ABFF",
+    ),
+    new_case(	
+		"2",
+		"0xB08FFB20760FFED58FADA86DFEF71AD72AA0FA763219618FE022C197E54708BB1191C66470250FCE8879487507CEE41381CA4D932F81C2B3F1AB20B539D50DCD",
+		"0xAC6BDB41324A9A9BF166DE5E1389582FAF72B6651987EE07FC3192943DB56050A37329CBB4A099ED8193E0757767A13DD52312AB4B03310DCD7F48A9DA04FD50E8083969EDB767B0CF6095179A163AB3661A05FBD5FAAAE82918A9962F0B93B855F97993EC975EEAA80D740ADBF4FF747359D041D5C33EA71D281E446B14773BCA97B43A23FB801676BD207A436C6481F1D2B9078717461A5B9D32E688F87748544523B524B0D57D5EA77A2775D2ECFA032CFBDBF52FB3786160279004E57AE6AF874E7303CE53299CCC041C7BC308D82A5698F3A8D0C38271AE35F8E9DBFBB694B5C803D89F7AE435DE236D525F54759B65E372FCD68EF20FA7111F9E4AFF72", // even
+		"0x7858794B5897C29F4ED0B40913416AB6C48588484E6A45F2ED3E26C941D878E923575AAC434EE2750E6439A6976F9BB4D64CEDB2A53CE8D04DD48CADCDF8E46F22747C6B81C6CEA86C0D873FBF7CEF262BAAC43A522BD7F32F3CDAC52B9337C77B3DCFB3DB3EDD80476331E82F4B1DF8EFDC1220C92656DFC9197BDC1877804E28D928A2A284B8DED506CBA304435C9D0133C246C98A7D890D1DE60CBC53A024361DA83A9B8775019083D22AC6820ED7C3C68F8E801DD4EC779EE0A05C6EB682EF9840D285B838369BA7E148FA27691D524FAEAF7C6ECE2A4B99A294B9F2C241857B5B90CC8BFFCFCF18DFA7D676131D5CD3855A5A3E8EBFA0CDFADB4D198B4A",
+    ),
+    ];
+
+    let from_decimal_string = |s: &str| {
+        if s.is_empty() {
+            return Ok(None);
+        }
+
+        let mut out = Int::default();
+        match out.set_string(s, 0) {
+            Some(_) => Ok(Some(out)),
+            None => Err(None::<Int>),
+        }
+    };
+
+    for (i, c) in test_vector.iter().enumerate() {
+        let x = from_decimal_string(c.x)
+            .expect(&format!("x.set_string({})", c.x))
+            .expect("unwrap x");
+        let y = from_decimal_string(c.y)
+            .expect(&format!("y.set_string({})", c.y))
+            .expect("unwrap y");
+
+        let m = from_decimal_string(c.m).expect("parse m");
+        let out = from_decimal_string(c.out).expect("parse out");
+
+        let mut z1 = Int::default();
+        let zz = z1.exp(&x, &y, m.as_ref());
+
+        match &zz {
+            Some(v) => assert!(is_normalized(*v), "#{i}: {v} is not normalized"),
+            _ => {}
+        }
+
+        match &zz {
+            None if out.is_none() => {}
+            Some(v) if out.is_some() && (v.cmp(out.as_ref().unwrap()) == 0) => {}
+            _ => panic!("#{i}: got {zz:?}, want {out:?}"),
+        }
+
+        if m.is_none() {
+            let m = Int::default();
+            let mut z2 = Int::default();
+            z2.exp(&x, &y, Some(&m));
+            assert_eq!(z2, z1, "#{i}");
+        }
+    }
+}
+
+#[test]
+fn gcd() {
+    struct Case {
+        d: &'static str,
+        x: &'static str,
+        y: &'static str,
+        a: &'static str,
+        b: &'static str,
+    }
+
+    let new_case = |d, x, y, a, b| Case { d, x, y, a, b };
+
+    let test_vector = vec![
+        // a <= 0 || b <= 0
+        new_case("0", "0", "0", "0", "0"),
+        new_case("7", "0", "1", "0", "7"),
+        new_case("7", "0", "-1", "0", "-7"),
+        new_case("11", "1", "0", "11", "0"),
+        new_case("7", "-1", "-2", "-77", "35"),
+        new_case("935", "-3", "8", "64515", "24310"),
+        new_case("935", "-3", "-8", "64515", "-24310"),
+        new_case("935", "3", "-8", "-64515", "-24310"),
+        new_case("1", "-9", "47", "120", "23"),
+        new_case("7", "1", "-2", "77", "35"),
+        new_case("935", "-3", "8", "64515", "24310"),
+        new_case(
+            "935000000000000000",
+            "-3",
+            "8",
+            "64515000000000000000",
+            "24310000000000000000",
+        ),
+        new_case(
+            "1",
+            "-221",
+            "22059940471369027483332068679400581064239780177629666810348940098015901108344",
+            "98920366548084643601728869055592650835572950932266967461790948584315647051443",
+            "991",
+        ),
+    ];
+
+    fn must_from_decimal_str(s: &str) -> Int {
+        let mut out = Int::default();
+        out.set_string(s, 0).expect(&format!("Int from {s}"));
+        out
+    }
+
+    for c in test_vector {
+        let d = must_from_decimal_str(c.d);
+        let x = must_from_decimal_str(c.x);
+        let y = must_from_decimal_str(c.y);
+        let a = must_from_decimal_str(c.a);
+        let b = must_from_decimal_str(c.b);
+
+        test_gcd(&d, None, None, &a, &b);
+        test_gcd(&d, Some(&x), None, &a, &b);
+        test_gcd(&d, None, Some(&y), &a, &b);
+        test_gcd(&d, Some(&x), Some(&y), &a, &b);
+    }
+
+    let n = randn(128, 256);
+    for _ in 0..n {
+        let a = rand_bytes(randn(1, 64));
+        let b = rand_bytes(randn(1, 64));
+        check_gcd(a.as_slice(), b.as_slice());
+    }
+}
+
+#[test]
+fn lsh() {
+    for (i, c) in LSH_TESTS.iter().enumerate() {
+        let input = int_from_decimal_str(c.input);
+        let expected = int_from_decimal_str(c.out);
+
+        let mut out = Int::default();
+        out.lsh(&input, c.shift);
+
+        assert!(is_normalized(&out), "#{i}: {out} is not normalized");
+        assert_eq!(out, expected, "#{i}");
+    }
+}
+
+#[test]
+fn lsh_rsh() {
+    for (i, c) in RSH_TESTS.iter().enumerate() {
+        let input = int_from_decimal_str(c.input);
+
+        let mut out = Int::default();
+        out.lsh(&input, c.shift);
+        out.rsh(&out.clone(), c.shift);
+
+        assert!(is_normalized(&out), "#{i} rsh test vector: {out} is not normalized");
+        assert_eq!(out, input, "#{i} rsh test vector");
+    }
+
+    for (i, c) in LSH_TESTS.iter().enumerate() {
+        let input = int_from_decimal_str(c.input);
+
+        let mut out = Int::default();
+        out.lsh(&input, c.shift);
+        out.rsh(&out.clone(), c.shift);
+
+        assert!(is_normalized(&out), "#{i} lsh test vector: {out} is not normalized");
+        assert_eq!(out, input, "#{i} lsh test vector");
+    }
+}
+
+#[test]
+fn mod_inverse() {
+    struct Case {
+        element: &'static str,
+        modulus: &'static str,
+    }
+
+    let new_case = |element, modulus| Case { element, modulus };
+
+    let test_vector = vec![
+        new_case("1234567", "458948883992"),
+	new_case("239487239847", "2410312426921032588552076022197566074856950548502459942654116941958108831682612228890093858261341614673227141477904012196503648957050582631942730706805009223062734745341073406696246014589361659774041027169249453200378729434170325843778659198143763193776859869524088940195577346119843545301547043747207749969763750084308926339295559968882457872412993810129130294592999947926365264059284647209730384947211681434464714438488520940127459844288859336526896320919633919"),
+	new_case("-10", "13"), // issue #16984
+	new_case("10", "-13"),
+	new_case("-17", "-13"),
+    ];
+
+    let mut element = Int::default();
+    let mut modulus = Int::default();
+    //let mut gcd = Int::default();
+    let mut inverse = Int::default();
+    let one = Int::new(1);
+
+    for c in test_vector {
+        element.set_string(c.element, 10);
+        modulus.set_string(c.modulus, 10);
+        inverse.mod_inverse(&element, &modulus);
+
+        let inv = inverse.clone();
+        inverse.mul(&inv, &element);
+
+        let inv = inverse.clone();
+        inverse.r#mod(&inv, &modulus);
+        assert_eq!(
+            inverse, one,
+            "mod_inverse({element},{modulus})*{element}%{modulus}={inverse}, not 1"
+        );
+    }
+}
+
+#[test]
 fn mul() {
     let n = randn(128, 256);
     for _ in 0..n {
@@ -450,6 +799,20 @@ fn quo_step_d6() {
 }
 
 #[test]
+fn rsh() {
+    for (i, c) in RSH_TESTS.iter().enumerate() {
+        let input = int_from_decimal_str(c.input);
+        let expected = int_from_decimal_str(c.out);
+
+        let mut out = Int::default();
+        out.rsh(&input, c.shift);
+
+        assert!(is_normalized(&out), "#{i}: {out} is not normalized");
+        assert_eq!(out, expected, "#{i}");
+    }
+}
+
+#[test]
 fn set_bytes() {
     let n = randn(128, 256);
     for _ in 0..n {
@@ -519,6 +882,26 @@ fn check_bytes(b: &[u8]) {
     assert_eq!(b, b2.as_slice())
 }
 
+fn check_gcd(a: &[u8], b: &[u8]) {
+    let mut x = Int::default();
+    let mut y = Int::default();
+
+    let mut aa = Int::default();
+    aa.set_bytes(a);
+
+    let mut bb = Int::default();
+    bb.set_bytes(b);
+
+    let mut d = Int::default();
+    d.gcd(Some(&mut x), Some(&mut y), &aa, &bb);
+
+    x.mul(&x.clone(), &aa);
+    y.mul(&y.clone(), &bb);
+    x.add(&x.clone(), &y);
+
+    assert_eq!(x, d, "check_gcd({a:?},{b:?})");
+}
+
 fn check_mul(a: &[u8], b: &[u8]) -> bool {
     let mut x = Int::default();
     let mut y = Int::default();
@@ -582,6 +965,12 @@ fn check_set_bytes(b: &[u8]) {
     }
 
     assert_eq!(normalize(b1.as_slice()), normalize(b));
+}
+
+fn int_from_decimal_str(s: &str) -> Int {
+    let mut out = Int::default();
+    out.set_string(s, 10).expect("set_string");
+    out
 }
 
 fn is_normalized(x: &Int) -> bool {
@@ -652,4 +1041,25 @@ where
     f(&mut z, &a.x, &a.y);
     assert!(is_normalized(&z), "{msg}{z} is not normalized");
     assert_eq!(z, a.z, "{msg}{a:?}");
+}
+
+fn test_gcd(d: &Int, x: Option<&Int>, y: Option<&Int>, a: &Int, b: &Int) {
+    let mut xx = if x.is_some() {
+        Some(Int::default())
+    } else {
+        None
+    };
+
+    let mut yy = if y.is_some() {
+        Some(Int::default())
+    } else {
+        None
+    };
+
+    let mut dd = Int::default();
+    dd.gcd(xx.as_mut(), yy.as_mut(), a, b);
+
+    assert_eq!(&dd, d, "gcd({x:?},{y:?},{a},{b}): bad d");
+    assert_eq!(x, xx.as_ref(), "gcd({x:?},{y:?},{a},{b}): bad x");
+    assert_eq!(y, yy.as_ref(), "gcd({x:?},{y:?},{a},{b}): bad y");
 }
