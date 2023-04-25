@@ -745,6 +745,18 @@
 <a href="#745" id="745">745</a>
 <a href="#746" id="746">746</a>
 <a href="#747" id="747">747</a>
+<a href="#748" id="748">748</a>
+<a href="#749" id="749">749</a>
+<a href="#750" id="750">750</a>
+<a href="#751" id="751">751</a>
+<a href="#752" id="752">752</a>
+<a href="#753" id="753">753</a>
+<a href="#754" id="754">754</a>
+<a href="#755" id="755">755</a>
+<a href="#756" id="756">756</a>
+<a href="#757" id="757">757</a>
+<a href="#758" id="758">758</a>
+<a href="#759" id="759">759</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::{
     fmt::Display,
     ops::{Neg, Not, Shr},
@@ -752,7 +764,7 @@
 
 <span class="kw">use </span>num_bigint::{BigInt, Sign};
 <span class="kw">use </span>num_integer::Integer;
-<span class="kw">use </span>num_traits::{One, Signed, Zero};
+<span class="kw">use </span>num_traits::{One, Pow, Signed, Zero};
 
 <span class="macro">lazy_static::lazy_static! </span>{
   <span class="kw">static </span><span class="kw-2">ref </span>INT_ONE: Int = Int(BigInt::from(<span class="number">1i8</span>));
@@ -917,25 +929,37 @@
     }
 
     <span class="kw">pub fn </span>exp(<span class="kw-2">&amp;mut </span><span class="self">self</span>, x: <span class="kw-2">&amp;</span><span class="self">Self</span>, y: <span class="kw-2">&amp;</span><span class="self">Self</span>, m: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="self">Self</span>&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span><span class="self">Self</span>&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>xx = x.<span class="number">0</span>.abs();
+        <span class="kw">let </span><span class="kw-2">mut </span>xx = x.<span class="number">0</span>.clone();
 
         <span class="kw">if </span>y.<span class="number">0</span>.is_negative() {
             <span class="kw">let </span>mm = <span class="kw">match </span><span class="kw-2">&amp;</span>m {
-                <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">None</span>,
-                <span class="prelude-val">Some</span>(v) <span class="kw">if </span>v.<span class="number">0</span>.is_zero() =&gt; <span class="kw">return </span><span class="prelude-val">None</span>,
+                <span class="prelude-val">None </span>=&gt; {
+                    <span class="self">self</span>.<span class="number">0 </span>= INT_ONE.<span class="number">0</span>.clone();
+                    <span class="kw">return </span><span class="prelude-val">Some</span>(<span class="self">self</span>);
+                }
+                <span class="prelude-val">Some</span>(v) <span class="kw">if </span>v.<span class="number">0</span>.is_zero() =&gt; {
+                    <span class="self">self</span>.<span class="number">0 </span>= INT_ONE.<span class="number">0</span>.clone();
+                    <span class="kw">return </span><span class="prelude-val">Some</span>(<span class="self">self</span>);
+                }
                 <span class="prelude-val">Some</span>(v) =&gt; <span class="kw-2">*</span>v,
             };
 
             <span class="kw">match </span><span class="self">Self</span>::default().mod_inverse(x, mm) {
-                <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">None</span>,
+                <span class="prelude-val">None </span>=&gt; {
+                    <span class="macro">println!</span>(<span class="string">&quot;hello&quot;</span>);
+                    <span class="kw">return </span><span class="prelude-val">None</span>;
+                }
                 <span class="prelude-val">Some</span>(v) =&gt; xx = v.<span class="number">0</span>.abs(),
             }
         }
-
         <span class="kw">let </span>yy = y.<span class="number">0</span>.abs();
+
         <span class="kw">let </span>mm = <span class="kw">match </span>m {
-            <span class="prelude-val">Some</span>(v) =&gt; v.<span class="number">0</span>.abs(),
-            <span class="prelude-val">None </span>=&gt; BigInt::zero(),
+            <span class="prelude-val">Some</span>(v) <span class="kw">if </span>!v.<span class="number">0</span>.is_zero() =&gt; v.<span class="number">0</span>.abs(),
+            <span class="kw">_ </span>=&gt; {
+                <span class="self">self</span>.<span class="number">0 </span>= xx.pow(yy.to_biguint().expect(<span class="string">&quot;as BigUint&quot;</span>));
+                <span class="kw">return </span><span class="prelude-val">Some</span>(<span class="self">self</span>);
+            }
         };
 
         <span class="self">self</span>.<span class="number">0 </span>= xx.modpow(<span class="kw-2">&amp;</span>yy, <span class="kw-2">&amp;</span>mm);
@@ -1045,7 +1069,7 @@
 
         d.gcd(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>x), <span class="prelude-val">None</span>, <span class="kw-2">&amp;</span>g, <span class="kw-2">&amp;</span>n);
 
-        <span class="kw">if </span>d == <span class="kw-2">*</span>INT_ONE {
+        <span class="kw">if </span>d != <span class="kw-2">*</span>INT_ONE {
             <span class="kw">return </span><span class="prelude-val">None</span>;
         }
 
