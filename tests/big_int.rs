@@ -1,8 +1,21 @@
 use math::big::Int;
 
+use strconv::NumErrorCause;
+
 mod helper;
 
 lazy_static::lazy_static! {
+  static ref CMP_ABS_TESTS: Vec<&'static str> = vec![
+    "0",
+    "1",
+    "2",
+    "10",
+    "10000000",
+    "2783678367462374683678456387645876387564783686583485",
+    "2783678367462374683678456387645876387564783686583486",
+    "32957394867987420967976567076075976570670947609750670956097509670576075067076027578341538",
+  ];
+
   static ref LSH_TESTS: Vec<IntShiftTest> = vec![
     IntShiftTest::new("0", 0, "0"),
     IntShiftTest::new("0", 1, "0"),
@@ -240,6 +253,59 @@ fn bytes() {
     for _ in 0..n {
         let b = rand_bytes(randn(1, 64));
         check_bytes(b.as_slice());
+    }
+}
+
+#[test]
+fn cmp_abs() {
+    let mut values = Vec::with_capacity(CMP_ABS_TESTS.len());
+    let mut prev = None::<Int>;
+    for s in CMP_ABS_TESTS.iter() {
+        let mut x = Int::default();
+        x.set_string(*s, 0).expect(&format!("set_string({s}, 0)"));
+
+        if let Some(v) = prev {
+            assert!(
+                v.cmp(&x) < 0,
+                "CMP_ABS_TESTS entries not sorted in ascending order"
+            );
+        }
+
+        values.push(x.clone());
+        prev = Some(x);
+    }
+
+    fn negate(x: &mut Int) {
+        let mut v = Int::default();
+        v.neg(&x);
+        *x = v;
+    }
+
+    for (i, x) in values.as_slice().iter().enumerate() {
+        for (j, y) in values.as_slice().iter().enumerate() {
+            for k in 0..4 {
+                let mut a = x.clone();
+                let mut b = y.clone();
+
+                if (k & 1) != 0 {
+                    negate(&mut a);
+                }
+
+                if (k & 2) != 0 {
+                    negate(&mut b);
+                }
+
+                let got = a.cmp_abs(&b);
+                let want = if i > j {
+                    1
+                } else if i < j {
+                    -1
+                } else {
+                    0
+                };
+                assert_eq!(got, want, "cmp_abs |{a}|, |{b}|");
+            }
+        }
     }
 }
 
@@ -524,6 +590,61 @@ fn gcd() {
 }
 
 #[test]
+fn int64() {
+    let test_vector = vec![
+        // int64
+        "0",
+        "1",
+        "-1",
+        "4294967295",
+        "-4294967295",
+        "4294967296",
+        "-4294967296",
+        "9223372036854775807",
+        "-9223372036854775807",
+        "-9223372036854775808",
+        // not int64
+        "0x8000000000000000",
+        "-0x8000000000000001",
+        "38579843757496759476987459679745",
+        "-38579843757496759476987459679745",
+    ];
+
+    for s in test_vector {
+        let mut x = Int::default();
+        x.set_string(s, 0).expect(&format!("set_string({s}, 0)"));
+
+        let want = match strconv::parse_int(s, 0, 64) {
+            Err(err) => {
+                match err.err {
+                    NumErrorCause::OutOfRangeSigned { .. } => {
+                        assert!(!x.is_int64(), "is_int64({x}) succeeded unexpectedly")
+                    }
+                    _ => panic!("parse_int({s}) failed"),
+                }
+                continue;
+            }
+            Ok(v) => v,
+        };
+
+        assert!(x.is_int64(), "is_int64({x}) failed unexpectedly");
+
+        assert_eq!(x.int64(), want, "int64({s})");
+    }
+}
+
+#[test]
+fn int_cmp_self() {
+    for s in CMP_ABS_TESTS.iter() {
+        let mut x = Int::default();
+        x.set_string(s, 0).expect(&format!("set_string({s}, 0)"));
+
+        let got = x.cmp(&x);
+        assert_eq!(got, 0, "x = {x}: x.cmp(x)");
+    }
+}
+
+#[test]
 fn lsh() {
     for (i, c) in LSH_TESTS.iter().enumerate() {
         let input = int_from_decimal_str(c.input);
@@ -546,7 +667,10 @@ fn lsh_rsh() {
         out.lsh(&input, c.shift);
         out.rsh(&out.clone(), c.shift);
 
-        assert!(is_normalized(&out), "#{i} rsh test vector: {out} is not normalized");
+        assert!(
+            is_normalized(&out),
+            "#{i} rsh test vector: {out} is not normalized"
+        );
         assert_eq!(out, input, "#{i} rsh test vector");
     }
 
@@ -557,7 +681,10 @@ fn lsh_rsh() {
         out.lsh(&input, c.shift);
         out.rsh(&out.clone(), c.shift);
 
-        assert!(is_normalized(&out), "#{i} lsh test vector: {out} is not normalized");
+        assert!(
+            is_normalized(&out),
+            "#{i} lsh test vector: {out} is not normalized"
+        );
         assert_eq!(out, input, "#{i} lsh test vector");
     }
 }
@@ -863,6 +990,52 @@ fn sum_zz() {
 
         let arg = ArgZz::new(a.y.clone(), a.z.clone(), a.x.clone());
         test_fun_zz("sub_zz symmetric", sub_zz, &arg);
+    }
+}
+
+#[test]
+fn uint64() {
+    let test_vector = vec![
+        // uint64
+        "0",
+        "1",
+        "4294967295",
+        "4294967296",
+        "8589934591",
+        "8589934592",
+        "9223372036854775807",
+        "9223372036854775808",
+        "0x08000000000000000",
+        // not uint64
+        "0x10000000000000000",
+        "-0x08000000000000000",
+        "-1",
+    ];
+
+    for s in test_vector {
+        let mut x = Int::default();
+        assert!(x.set_string(s, 0).is_some(), "set_string({s}, 0) failed");
+
+        let want = match strconv::parse_uint(s, 0, 64) {
+            Ok(v) => v,
+            Err(err) => {
+                let ok = s.starts_with('-')
+                    || match err.err {
+                        NumErrorCause::OutOfRangeUnsigned { .. } => true,
+                        _ => false,
+                    };
+
+                if ok {
+                    assert!(!x.is_uint64(), "is_uint64({s}) succeed unexpectedly");
+                } else {
+                    panic!("parse_uint({s}) failed");
+                }
+                continue;
+            }
+        };
+
+        assert!(x.is_uint64(), "is_uint64({s}) failed unexpectedly");
+        assert_eq!(x.uint64(), want, "uint64({s})");
     }
 }
 
