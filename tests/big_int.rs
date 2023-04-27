@@ -5,6 +5,47 @@ use strconv::NumErrorCause;
 mod helper;
 
 lazy_static::lazy_static! {
+  static ref BITWISE_TESTS: Vec<BitwiseTest> = vec![
+    BitwiseTest::new("0x00", "0x00", "0x00", "0x00", "0x00", "0x00"),
+    BitwiseTest::new("0x00", "0x01", "0x00", "0x01", "0x01", "0x00"),
+    BitwiseTest::new("0x01", "0x00", "0x00", "0x01", "0x01", "0x01"),
+    BitwiseTest::new("-0x01", "0x00", "0x00", "-0x01", "-0x01", "-0x01"),
+    BitwiseTest::new("-0xaf", "-0x50", "-0xf0", "-0x0f", "0xe1", "0x41"),
+    BitwiseTest::new("0x00", "-0x01", "0x00", "-0x01", "-0x01", "0x00"),
+    BitwiseTest::new("0x01", "0x01", "0x01", "0x01", "0x00", "0x00"),
+    BitwiseTest::new("-0x01", "-0x01", "-0x01", "-0x01", "0x00", "0x00"),
+    BitwiseTest::new("0x07", "0x08", "0x00", "0x0f", "0x0f", "0x07"),
+    BitwiseTest::new("0x05", "0x0f", "0x05", "0x0f", "0x0a", "0x00"),
+    BitwiseTest::new("0xff", "-0x0a", "0xf6", "-0x01", "-0xf7", "0x09"),
+    BitwiseTest::new("0x013ff6", "0x9a4e", "0x1a46", "0x01bffe", "0x01a5b8", "0x0125b0"),
+    BitwiseTest::new("-0x013ff6", "0x9a4e", "0x800a", "-0x0125b2", "-0x01a5bc", "-0x01c000"),
+    BitwiseTest::new("-0x013ff6", "-0x9a4e", "-0x01bffe", "-0x1a46", "0x01a5b8", "0x8008"),
+    BitwiseTest::new(
+        "0x1000009dc6e3d9822cba04129bcbe3401",
+        "0xb9bd7d543685789d57cb918e833af352559021483cdb05cc21fd",
+        "0x1000001186210100001000009048c2001",
+        "0xb9bd7d543685789d57cb918e8bfeff7fddb2ebe87dfbbdfe35fd",
+        "0xb9bd7d543685789d57ca918e8ae69d6fcdb2eae87df2b97215fc",
+        "0x8c40c2d8822caa04120b8321400",
+    ),
+    BitwiseTest::new(
+        "0x1000009dc6e3d9822cba04129bcbe3401",
+        "-0xb9bd7d543685789d57cb918e833af352559021483cdb05cc21fd",
+        "0x8c40c2d8822caa04120b8321401",
+        "-0xb9bd7d543685789d57ca918e82229142459020483cd2014001fd",
+        "-0xb9bd7d543685789d57ca918e8ae69d6fcdb2eae87df2b97215fe",
+        "0x1000001186210100001000009048c2000",
+    ),
+    BitwiseTest::new(
+        "-0x1000009dc6e3d9822cba04129bcbe3401",
+        "-0xb9bd7d543685789d57cb918e833af352559021483cdb05cc21fd",
+        "-0xb9bd7d543685789d57cb918e8bfeff7fddb2ebe87dfbbdfe35fd",
+        "-0x1000001186210100001000009048c2001",
+        "0xb9bd7d543685789d57ca918e8ae69d6fcdb2eae87df2b97215fc",
+        "0xb9bd7d543685789d57ca918e82229142459020483cd2014001fc",
+    ),
+  ];
+
   static ref CMP_ABS_TESTS: Vec<&'static str> = vec![
     "0",
     "1",
@@ -97,6 +138,21 @@ struct ArgZz {
     y: Int,
 }
 
+struct BitwiseTest {
+    x: &'static str,
+    y: &'static str,
+    and: &'static str,
+    or: &'static str,
+    xor: &'static str,
+    and_not: &'static str,
+}
+
+struct IntShiftTest {
+    input: &'static str,
+    shift: usize,
+    out: &'static str,
+}
+
 impl ArgZz {
     fn new(z: Int, x: Int, y: Int) -> Self {
         Self { z, x, y }
@@ -111,10 +167,24 @@ impl ArgZz {
     }
 }
 
-struct IntShiftTest {
-    input: &'static str,
-    shift: usize,
-    out: &'static str,
+impl BitwiseTest {
+    fn new(
+        x: &'static str,
+        y: &'static str,
+        and: &'static str,
+        or: &'static str,
+        xor: &'static str,
+        and_not: &'static str,
+    ) -> Self {
+        Self {
+            x,
+            y,
+            and,
+            or,
+            xor,
+            and_not,
+        }
+    }
 }
 
 impl IntShiftTest {
@@ -211,6 +281,45 @@ fn bit_len() {
         );
 
         assert_eq!(x.bit_len(), c.out, "#{i} bit_len");
+    }
+}
+
+#[test]
+fn bit_set() {
+    struct Case {
+        x: &'static str,
+        i: usize,
+        b: u8,
+    }
+
+    let new_case = |x, i, b| Case { x, i, b };
+
+    let bitset_test_vector = vec![
+        new_case("0", 0, 0),
+        new_case("0", 200, 0),
+        new_case("1", 0, 1),
+        new_case("1", 1, 0),
+        new_case("-1", 0, 1),
+        new_case("-1", 200, 1),
+        new_case("0x2000000000000000000000000000", 108, 0),
+        new_case("0x2000000000000000000000000000", 109, 1),
+        new_case("0x2000000000000000000000000000", 110, 0),
+        new_case("-0x2000000000000000000000000001", 108, 1),
+        new_case("-0x2000000000000000000000000001", 109, 0),
+        new_case("-0x2000000000000000000000000001", 110, 1),
+    ];
+
+    for c in BITWISE_TESTS.iter() {
+        let x = int_from_str(c.x, None);
+        test_bitset(&x);
+
+        let y = int_from_str(c.y, None);
+        test_bitset(&y);
+    }
+
+    for (i, c) in bitset_test_vector.iter().enumerate() {
+        let x = int_from_str(c.x, None);
+        assert_eq!(x.bit(c.i), c.b, "#{i} x={x}");
     }
 }
 
@@ -1040,6 +1149,32 @@ fn uint64() {
 }
 
 // private functions
+fn alt_bit(x: &Int, i: usize) -> u8 {
+    let mut z = Int::default();
+    z.rsh(x, i);
+    z.and(&z.clone(), &Int::new(1));
+
+    if z.cmp(&Int::new(0)) != 0 {
+        1
+    } else {
+        0
+    }
+}
+
+fn alt_set_bit(z: Int, x: &Int, i: usize, b: bool) -> Int {
+    let mut m = Int::new(1);
+    m.lsh(&m.clone(), i);
+
+    let mut z = z;
+    if b {
+        z.or(x, &m);
+    } else {
+        z.and_not(x, &m);
+    }
+
+    z
+}
+
 fn check_bytes(b: &[u8]) {
     let b = {
         let mut v = b;
@@ -1146,6 +1281,13 @@ fn int_from_decimal_str(s: &str) -> Int {
     out
 }
 
+fn int_from_str(s: &str, base: Option<u8>) -> Int {
+    let mut out = Int::default();
+    out.set_string(s, base.unwrap_or_default())
+        .expect("set_string");
+    out
+}
+
 fn is_normalized(x: &Int) -> bool {
     match x.bits().next_back() {
         None => x.sign() == 0,
@@ -1204,6 +1346,39 @@ fn randn(lo: u64, hi: u64) -> usize {
     helper::rand::read(&mut b).unwrap();
 
     (u64::from_be_bytes(b) % (hi - lo) + lo) as usize
+}
+
+fn test_bitset(x: &Int) {
+    let n = x.bit_len();
+    let z = x.clone();
+    let z1 = x.clone();
+
+    println!("x = {x}");
+    for i in 0..(n + 10) {
+        let old = z.bit(i);
+        let old1 = alt_bit(&z1, i);
+        assert_eq!(old, old1, "bitset: inconsistent value for bit({z1}, {i})");
+
+        let z0 = &z;
+
+        let mut z = Int::default();
+
+        z.set_bit(z0, i, true);
+        let z1 = alt_set_bit(Int::default(), &z1, i, true);
+        assert_ne!(z.bit(i), 0, "bitset: bit {i} of {z}");
+        assert_eq!(z, z1, "bitset: inconsistent value after set_bit 1");
+
+        z.set_bit(&z.clone(), i, false);
+        let z1 = alt_set_bit(Int::default(), &z1, i, false);
+        assert_eq!(z.bit(i), 0, "bitset: bit {i} of {z}");
+        assert_eq!(z, z1, "bitset: inconsistent value after set_bit 0");
+
+        let z1 = alt_set_bit(z1.clone(), &z1, i, old == 1);
+        z.set_bit(&z.clone(), i, old == 1);
+        assert_eq!(z, z1, "bitset: inconsistent value after set_bit old={old}");
+    }
+
+    assert_eq!(&z, x, "bitset");
 }
 
 fn test_fun_zz<F>(msg: &str, f: F, a: &ArgZz)

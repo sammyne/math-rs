@@ -81,7 +81,7 @@ impl Int {
         self
     }
 
-    pub fn bit(&self, i: usize) -> usize {
+    pub fn bit(&self, i: usize) -> u8 {
         if self.0.bit(i as u64) {
             1
         } else {
