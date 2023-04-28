@@ -1286,6 +1286,44 @@ fn sign_z() {
 }
 
 #[test]
+fn sqrt() {
+    let mut root = 0;
+    let mut r = Int::default();
+
+    for i in 0..10000 {
+        if (root + 1) * (root + 1) <= i {
+            root += 1;
+        }
+
+        let n = Int::new(i);
+
+        r.set_int64(-2);
+        r.sqrt(&n);
+
+        assert_eq!(r, Int::new(root), "sqrt({n})");
+    }
+
+    fn fake(prefix: &str, s: &str, count: usize) -> String {
+        let mut out = String::with_capacity(prefix.len() + s.len() * count);
+        out.push_str(prefix);
+        for _ in 0..count {
+            out.push_str(s);
+        }
+        out
+    }
+
+    for i in (0..1000).step_by(10) {
+        let n = int_from_str(&fake("1", "0", i), Some(10));
+
+        let mut r = Int::default();
+        r.sqrt(&n);
+
+        let root = int_from_str(&fake("1", "0", i / 2), Some(10));
+        assert_eq!(r, root, "sqrt(1e{i})");
+    }
+}
+
+#[test]
 fn sum_zz() {
     fn add_zz<'a>(z: &'a mut Int, x: &Int, y: &Int) -> &'a mut Int {
         z.add(x, y)

@@ -606,7 +606,7 @@ impl Int {
     }
 
     pub fn sqrt(&mut self, x: &Self) -> &mut Self {
-        assert!(!x.0.is_zero(), "x mustn't be 0");
+        assert!(!x.0.is_negative(), "x mustn't be negative");
 
         self.0 = x.0.sqrt();
 
