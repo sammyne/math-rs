@@ -1103,6 +1103,34 @@ fn sum_zz() {
 }
 
 #[test]
+fn trailing_zero_bits() {
+    struct Case {
+        input: &'static str,
+        output: usize,
+    }
+
+    fn new_case(input: &'static str, output: usize) -> Case {
+        Case { input, output }
+    }
+
+    let test_vector = vec![
+        new_case("0", 0),
+        new_case("1", 0),
+        new_case("-1", 0),
+        new_case("4", 2),
+        new_case("-8", 3),
+        new_case("0x4000000000000000000", 74),
+        new_case("-0x8000000000000000000", 75),
+    ];
+
+    for (i, c) in test_vector.iter().enumerate() {
+        let input = int_from_str(c.input, None);
+        let got = input.trailing_zero_bits();
+        assert_eq!(got, c.output, "#{i}");
+    }
+}
+
+#[test]
 fn uint64() {
     let test_vector = vec![
         // uint64
