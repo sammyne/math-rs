@@ -357,6 +357,23 @@ fn bits() {
 }
 
 #[test]
+fn bitwise() {
+    let mut x = Int::default();
+    let mut y = Int::default();
+    for c in BITWISE_TESTS.iter() {
+        x.set_string(c.x, 0)
+            .expect(&format!("x.set_string({}, 0)", c.x));
+        y.set_string(c.y, 0)
+            .expect(&format!("y.set_string({}, 0)", c.y));
+
+        test_bit_fun("and", Int::and, &x, &y, c.and);
+        test_bit_fun("and_not", Int::and_not, &x, &y, c.and_not);
+        test_bit_fun("or", Int::or, &x, &y, c.or);
+        test_bit_fun("xor", Int::xor, &x, &y, c.xor);
+    }
+}
+
+#[test]
 fn bytes() {
     let n = randn(128, 256);
     for _ in 0..n {
@@ -1375,6 +1392,19 @@ fn randn(lo: u64, hi: u64) -> usize {
 
     (u64::from_be_bytes(b) % (hi - lo) + lo) as usize
 }
+
+fn test_bit_fun<F>(msg: &'static str, f: F, x: &Int, y: &Int, exp: &'static str)
+where
+    F: for<'a> Fn(&'a mut Int, &Int, &Int) -> &'a mut Int,
+{
+    let mut expected = Int::default();
+    expected.set_string(exp, 0);
+
+    let mut got = Int::default();
+    let _ = f(&mut got, x, y);
+    assert_eq!(got, expected, "{msg}");
+}
+
 
 fn test_bitset(x: &Int) {
     let n = x.bit_len();
