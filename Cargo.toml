@@ -17,6 +17,7 @@ num-traits = "0.2.15"
 
 [dev-dependencies]
 getrandom = "0.2.9"
+rand = "0.8.5"
 
 [dev-dependencies.strconv]
 git = "https://github.com/sammyne/strconv-rs.git"

@@ -1,6 +1,6 @@
 use std::{
     fmt::Display,
-    ops::{Neg, Not, Shr},
+    ops::{Neg, Not},
 };
 
 use num_bigint::{BigInt, Sign};
@@ -331,14 +331,21 @@ impl Int {
         }
 
         let x = if x.0.is_negative() || (x.0 >= p.0) {
-            Self(&x.0 % &p.0)
+            let mut v = Int::default();
+            v.r#mod(x, p);
+            v
         } else {
             x.clone()
         };
 
-        if !self.0.bit(3) && !self.0.bit(2) && self.0.bit(1) && self.0.bit(0) {
+        let d =
+            p.0.iter_u32_digits()
+                .next()
+                .expect("take least significant digit");
+
+        if d % 4 == 3 {
             self.mod_sqrt_3mod4_prime(&x, &p)
-        } else if !self.0.bit(3) && self.0.bit(2) && !self.0.bit(1) && self.0.bit(0) {
+        } else if d % 8 == 5 {
             self.mod_sqrt_5mod8_prime(&x, &p)
         } else {
             self.mod_sqrt_tonelli_shanks(&x, &p)
@@ -487,7 +494,26 @@ impl Int {
         (self, r)
     }
 
-    // pub fn rand<R>(&mut self, rnd: &mut R, n: &Self) -> &mut Self {}
+    pub fn rand<R>(&mut self, rnd: &mut R, n: &Self) -> &mut Self
+    where
+        R: std::io::Read,
+    {
+        if !n.0.is_positive() {
+            self.0.set_zero();
+            return self;
+        }
+
+        let mut buf = vec![0u8; n.bit_len() / 8];
+        self.0 = loop {
+            rnd.read_exact(buf.as_mut_slice()).expect("fill buf");
+            let v = BigInt::from_bytes_be(Sign::Plus, buf.as_slice());
+            if v < n.0 {
+                break v;
+            }
+        };
+
+        self
+    }
 
     pub fn rem(&mut self, x: &Self, y: &Self) -> &mut Self {
         assert!(!y.0.is_zero(), "divisor mustn't be 0");
@@ -628,23 +654,28 @@ impl Int {
     }
 
     fn mod_sqrt_5mod8_prime(&mut self, x: &Self, p: &Self) -> Option<&mut Self> {
-        let x = &x.0;
-        let p = &p.0;
+        let mut e = Int::default();
+        e.rsh(p, 3);
 
-        let e = p >> 3;
-        let tx: BigInt = x << 1;
-        let alpha = tx.modpow(&e, p);
-        let mut beta = &alpha * &alpha;
+        let mut tx = Int::default();
+        tx.lsh(x, 1);
 
-        beta %= p;
-        beta *= tx;
-        beta %= p;
-        beta -= 1;
-        beta *= x;
-        beta %= p;
-        beta *= alpha;
+        let mut alpha = Int::default();
+        alpha.exp(&tx, &e, Some(p));
 
-        self.0 = beta % p;
+        let mut beta = Int::default();
+
+        beta.mul(&alpha, &alpha);
+        beta.r#mod(&beta.clone(), p);
+        beta.mul(&beta.clone(), &tx);
+        beta.r#mod(&beta.clone(), p);
+        beta.sub(&beta.clone(), &INT_ONE);
+        beta.mul(&beta.clone(), x);
+        beta.r#mod(&beta.clone(), p);
+        beta.mul(&beta.clone(), &alpha);
+
+        self.r#mod(&beta, p);
+
         Some(self)
     }
 
@@ -704,47 +735,51 @@ pub fn jacobi(x: &Int, y: &Int) -> i32 {
         y.0
     );
 
-    let (mut a, mut b) = (x.0.clone(), y.0.clone());
+    let (mut a, mut b) = (x.clone(), y.clone());
     #[allow(unused_assignments)]
-    let mut c = BigInt::zero();
+    let mut c = Int::default();
     let mut j = 1;
 
-    if b.is_negative() {
-        if a.is_negative() {
+    if b.0.is_negative() {
+        if a.0.is_negative() {
             j = -1;
         }
-        b = b.abs();
+        b.abs(&b.clone());
     }
 
     loop {
-        if b == INT_ONE.0 {
+        //println!("a={a}");
+        //println!("b={b}");
+        if b.0 == INT_ONE.0 {
             return j;
         }
-        if a.is_zero() {
+        if a.0.is_zero() {
             return 0;
         }
-        a = a % &b;
-        if a.is_zero() {
+        a.r#mod(&a.clone(), &b);
+        //println!("a1={a}");
+        if a.0.is_zero() {
             return 0;
         }
 
-        let s = a.trailing_zeros().expect("BigInt::trailing_zeros");
+        let s = a.trailing_zero_bits();
         if (s & 1) != 0 {
-            match b.iter_u32_digits().next().expect("get 1st digit") & 7 {
+            match b.0.iter_u32_digits().next().expect("get 1st digit") & 7 {
                 3 | 5 => j = -j,
                 _ => {}
             }
         }
-        c = a.shr(s);
+        //println!("s={s}");
+        c.rsh(&mut a, s);
 
-        let b0 = b.iter_u32_digits().next().expect("get 1st word of b");
-        let c0 = c.iter_u32_digits().next().expect("get 1st word of c");
+        let b0 = b.0.iter_u32_digits().next().expect("get 1st word of b");
+        let c0 = c.0.iter_u32_digits().next().expect("get 1st word of c");
         if (b0 & 3 == 3) && (c0 & 3 == 3) {
             j = -j;
         }
 
         a = b;
-        b = c;
+        b = c.clone();
     }
 }
 

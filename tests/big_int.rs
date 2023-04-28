@@ -1,4 +1,4 @@
-use math::big::Int;
+use math::big::{self, Int};
 
 use strconv::NumErrorCause;
 
@@ -81,6 +81,38 @@ lazy_static::lazy_static! {
         "340282366920938463463374607431768211456",
     ),
     IntShiftTest::new("1", 128, "340282366920938463463374607431768211456"),
+  ];
+
+  static ref PRIMES: Vec<&'static str> = vec![
+    "2",
+    "3",
+    "5",
+    "7",
+    "11",
+
+    "13756265695458089029",
+    "13496181268022124907",
+    "10953742525620032441",
+    "17908251027575790097",
+
+    // https://golang.org/issue/638
+    "18699199384836356663",
+
+    "98920366548084643601728869055592650835572950932266967461790948584315647051443",
+    "94560208308847015747498523884063394671606671904944666360068158221458669711639",
+
+    // https://primes.utm.edu/lists/small/small3.html
+    "449417999055441493994709297093108513015373787049558499205492347871729927573118262811508386655998299074566974373711472560655026288668094291699357843464363003144674940345912431129144354948751003607115263071543163",
+    "230975859993204150666423538988557839555560243929065415434980904258310530753006723857139742334640122533598517597674807096648905501653461687601339782814316124971547968912893214002992086353183070342498989426570593",
+    "5521712099665906221540423207019333379125265462121169655563495403888449493493629943498064604536961775110765377745550377067893607246020694972959780839151452457728855382113555867743022746090187341871655890805971735385789993",
+    "203956878356401977405765866929034577280193993314348263094772646453283062722701277632936616063144088173312372882677123879538709400158306567338328279154499698366071906766440037074217117805690872792848149112022286332144876183376326512083574821647933992961249917319836219304274280243803104015000563790123",
+
+    // ECC primes: https://tools.ietf.org/html/draft-ladd-safecurves-02
+    "3618502788666131106986593281521497120414687020801267626233049500247285301239",                                                                                  // Curve1174: 2^251-9
+    "57896044618658097711785492504343953926634992332820282019728792003956564819949",                                                                                 // Curve25519: 2^255-19
+    "9850501549098619803069760025035903451269934817616361666987073351061430442874302652853566563721228910201656997576599",                                           // E-382: 2^382-105
+    "42307582002575910332922579714097346549017899709713998034217522897561970639123926132812109468141778230245837569601494931472367",                                 // Curve41417: 2^414-17
+    "6864797660130609714981900799081393217269435300143305409394463459185543183397656052122559640661454554977296311391480858037121987999716643812574028291115057151", // E-521: 2^521-1
   ];
 
   static ref PROD_ZZ: Vec<ArgZz> = vec![
@@ -771,6 +803,94 @@ fn int_cmp_self() {
 }
 
 #[test]
+fn jacobi() {
+    struct Case {
+        x: i64,
+        y: i64,
+        result: i32,
+    }
+
+    fn new_case(x: i64, y: i64, result: i32) -> Case {
+        Case { x, y, result }
+    }
+
+    let test_vector = vec![
+        new_case(0, 1, 1),
+        new_case(0, -1, 1),
+        new_case(1, 1, 1),
+        new_case(1, -1, 1),
+        new_case(0, 5, 0),
+        new_case(1, 5, 1),
+        new_case(2, 5, -1),
+        new_case(-2, 5, -1),
+        new_case(2, -5, -1),
+        new_case(-2, -5, 1),
+        new_case(3, 5, -1),
+        new_case(5, 5, 0),
+        new_case(-5, 5, 0),
+        new_case(6, 5, 1),
+        new_case(6, -5, 1),
+        new_case(-6, 5, 1),
+        new_case(-6, -5, -1),
+    ];
+
+    let mut x = Int::default();
+    let mut y = Int::default();
+
+    for (i, c) in test_vector.iter().enumerate() {
+        x.set_int64(c.x);
+        y.set_int64(c.y);
+
+        assert_eq!(
+            big::jacobi(&x, &y),
+            c.result,
+            "#{i} jacobi({}, {})",
+            c.x,
+            c.y
+        );
+    }
+
+    struct StringCase {
+        x: &'static str,
+        y: &'static str,
+        result: i32,
+    }
+
+    fn new_string_case(x: &'static str, y: &'static str, result: i32) -> StringCase {
+        StringCase { x, y, result }
+    }
+
+    let test_vector = vec![new_string_case(
+        "-9285308306346108245",
+        "13756265695458089029",
+        1,
+    )];
+
+    for (i, c) in test_vector.iter().enumerate() {
+        x.set_string(c.x, 10);
+        y.set_string(c.y, 10);
+
+        assert_eq!(
+            big::jacobi(&x, &y),
+            c.result,
+            "#{i} string jacobi({}, {})",
+            c.x,
+            c.y
+        );
+    }
+}
+
+#[test]
+fn jacobi_panic() {
+    std::panic::catch_unwind(|| {
+        let x = Int::new(1);
+        let y = Int::new(2);
+        let _ = big::jacobi(&x, &y);
+    })
+    .expect_err("miss error");
+}
+
+#[test]
 fn lsh() {
     for (i, c) in LSH_TESTS.iter().enumerate() {
         let input = int_from_decimal_str(c.input);
@@ -853,6 +973,41 @@ fn mod_inverse() {
             "mod_inverse({element},{modulus})*{element}%{modulus}={inverse}, not 1"
         );
     }
+}
+
+#[test]
+fn mod_sqrt() {
+    let mut elt = Int::default();
+    let mut m = Int::default();
+    let mut modx4 = Int::default();
+    let mut sq = Int::default();
+    let mut sqrt = Int::default();
+
+    let mut r = helper::rand::Reader::new(9);
+    for (i, s) in PRIMES.iter().enumerate().skip(1) {
+        m.set_string(s, 10);
+        modx4.lsh(&m, 2);
+
+        for _ in 1..5 {
+            elt.rand(&mut r, &modx4);
+            //if elt.to_string() != "9775475957825047973" {
+            //    continue;
+            //}
+            //println!("-----------------------------");
+            //println!("elt0 = {elt}");
+            //println!(" mod = {m}");
+            //println!("modx4 = {modx4}");
+            elt.sub(&elt.clone(), &m);
+            //println!("elt = {elt}");
+
+            assert!(
+                test_mod_sqrt(&elt, &m, &mut sq, &mut sqrt),
+                "#{i}: failed (sqrt(e) = {sqrt})"
+            );
+        }
+    }
+
+    // todo: exhaustive test for small values
 }
 
 #[test]
@@ -1503,4 +1658,43 @@ fn test_gcd(d: &Int, x: Option<&Int>, y: Option<&Int>, a: &Int, b: &Int) {
     assert_eq!(&dd, d, "gcd({x:?},{y:?},{a},{b}): bad d");
     assert_eq!(x, xx.as_ref(), "gcd({x:?},{y:?},{a},{b}): bad x");
     assert_eq!(y, yy.as_ref(), "gcd({x:?},{y:?},{a},{b}): bad y");
+}
+
+fn test_mod_sqrt(elt: &Int, m: &Int, sq: &mut Int, sqrt: &mut Int) -> bool {
+    let mut sq_chk = Int::default();
+    let mut sqrt_chk = Int::default();
+
+    sq.mul(&elt, &elt);
+    sq.r#mod(&sq.clone(), m);
+
+    let z = sqrt.mod_sqrt(sq, m);
+    assert!(z.is_some(), "mod_sqrt returned wrong value {z:?}");
+
+    sq_chk.add(&sq, m);
+    let z = sqrt_chk
+        .mod_sqrt(&sq_chk, m)
+        .expect("mod_sqrt return nil after add");
+    assert_eq!(
+        z, sqrt,
+        "mod_sqrt returned inconsistent value {z} after add"
+    );
+
+    sq_chk.sub(&sq, m);
+    let z = sqrt_chk
+        .mod_sqrt(&sq_chk, m)
+        .expect("mod_sqrt return nil after sub");
+    assert_eq!(
+        z, sqrt,
+        "mod_sqrt returned inconsistent value {z} after sub"
+    );
+
+    if sqrt.cmp(elt) == 0 {
+        return true;
+    }
+
+    let mut sqrt_sq = Int::default();
+    sqrt_sq.mul(&sqrt, &sqrt);
+    sqrt_sq.r#mod(&sqrt_sq.clone(), m);
+
+    sq.cmp(&sqrt_sq) == 0
 }
