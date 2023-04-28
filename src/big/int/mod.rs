@@ -212,13 +212,14 @@ impl Int {
         let b = self.bytes();
 
         assert!(out.len() >= b.len(), "buf too small");
+        println!("out.len = {}, b.len = {}", out.len(), b.len());
 
         out.fill(0);
 
-        let mut j = out.len();
-        for i in (0..b.len()).rev() {
+        //let mut j = out.len()-1;
+        for (i, j) in (0..b.len()).rev().zip((0..out.len()).rev()) {
             out[j] = b[i];
-            j -= 1;
+            //j -= 1;
         }
 
         out

@@ -412,6 +412,9 @@ fn bytes() {
         let b = rand_bytes(randn(1, 64));
         check_bytes(b.as_slice());
     }
+
+    // zero
+    check_bytes(&[]);
 }
 
 #[test]
@@ -675,6 +678,51 @@ new_case(
             let mut z2 = Int::default();
             z2.exp(&x, &y, Some(&m));
             assert_eq!(z2, z1, "#{i}");
+        }
+    }
+}
+
+#[test]
+fn fill_bytes() {
+    fn check_result(ctx: &str, buf: &[u8], want: &Int) {
+        let mut w = Int::default();
+        w.abs(want);
+
+        let mut got = Int::default();
+        got.set_bytes(buf);
+        assert_eq!(got, w, "{ctx}");
+    }
+
+    let test_vector = vec![
+        "0",
+        "1000",
+        "0xffffffff",
+        "-0xffffffff",
+        "0xffffffffffffffff",
+        "0x10000000000000000",
+        "0xabababababababababababababababababababababababababa",
+        "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    ];
+
+    for n in test_vector {
+        let x = int_from_str(n, Some(0));
+
+        // Perfectly sized buffer.
+        let byte_len = (x.bit_len() + 7) / 8;
+        let mut buf = vec![0u8; byte_len];
+        check_result(&format!("n={n}"), x.fill_bytes(&mut buf), &x);
+
+        // Way larger, checking all bytes get zeroed.
+        let mut buf = [0xffu8; 100];
+        check_result(&format!("check bytes zeroed for n={n}"), x.fill_bytes(&mut buf), &x);
+
+        // Too small
+        if byte_len > 0 {
+            std::panic::catch_unwind(|| {
+                let mut buf = vec![0u8; byte_len - 1];
+                x.fill_bytes(&mut buf);
+            })
+            .expect_err(&format!("expected panic for small buffer and value {x}"));
         }
     }
 }
