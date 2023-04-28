@@ -714,7 +714,11 @@ fn fill_bytes() {
 
         // Way larger, checking all bytes get zeroed.
         let mut buf = [0xffu8; 100];
-        check_result(&format!("check bytes zeroed for n={n}"), x.fill_bytes(&mut buf), &x);
+        check_result(
+            &format!("check bytes zeroed for n={n}"),
+            x.fill_bytes(&mut buf),
+            &x,
+        );
 
         // Too small
         if byte_len > 0 {
@@ -847,6 +851,22 @@ fn int_cmp_self() {
 
         let got = x.cmp(&x);
         assert_eq!(got, 0, "x = {x}: x.cmp(x)");
+    }
+}
+
+// ref: https://github.com/golang/go/issues/22830
+#[test]
+fn golang_issue_22830() {
+    let one = Int::new(1);
+
+    let base = int_from_str("84555555300000000000", Some(10));
+    let m = int_from_str("66666670001111111111", Some(10));
+    let want = int_from_str("17888885298888888889", Some(10));
+
+    for n in [0, 1, -1] {
+        let mut got = Int::new(n);
+        got.exp(&base, &one, Some(&m));
+        assert_eq!(got, want, "({n}).exp({base}, 1, {m})");
     }
 }
 
