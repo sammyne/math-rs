@@ -949,6 +949,42 @@ fn mul_range_z() {
 }
 
 #[test]
+fn not() {
+    struct Case {
+        input: &'static str,
+        output: &'static str,
+    }
+    fn new_case(input: &'static str, output: &'static str) -> Case {
+        Case { input, output }
+    }
+
+    let test_vector = vec![
+        new_case("0", "-1"),
+        new_case("1", "-2"),
+        new_case("7", "-8"),
+        new_case("0", "-1"),
+        new_case("-81910", "81909"),
+        new_case(
+            "298472983472983471903246121093472394872319615612417471234712061",
+            "-298472983472983471903246121093472394872319615612417471234712062",
+        ),
+    ];
+
+    let mut input = Int::default();
+    let mut output = Int::default();
+    let mut expected = Int::default();
+    for (i, c) in test_vector.iter().enumerate() {
+        input.set_string(c.input, 10);
+        expected.set_string(c.output, 10);
+        output.not(&input);
+        assert_eq!(output, expected, "#{i} 1st not");
+
+        output.not(&output.clone());
+        assert_eq!(output, input, "#{i} 2nd not");
+    }
+}
+
+#[test]
 fn prod_zz() {
     fn mul_zz<'a>(z: &'a mut Int, x: &Int, y: &Int) -> &'a mut Int {
         z.mul(x, y)
@@ -1404,7 +1440,6 @@ where
     let _ = f(&mut got, x, y);
     assert_eq!(got, expected, "{msg}");
 }
-
 
 fn test_bitset(x: &Int) {
     let n = x.bit_len();
