@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["jacobi",""]],"struct":[["Int",""]],"type":[["Word",""]]};
+window.SIDEBAR_ITEMS = {"constant":[["MAX_BASE","The largest number base accepted for string conversions."]],"fn":[["jacobi","Returns the Jacobi symbol (x/y), either +1, -1, or 0. The y argument must be an odd integer."]],"struct":[["Int","An Int represents a signed multi-precision integer. The zero value for an Int represents the value 0."]]};

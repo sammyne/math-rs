@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":[["big",""],["bits",""]]};
+window.SIDEBAR_ITEMS = {"mod":[["big","Implements arbitrary-precision arithmetic (big numbers). The following numeric types are supported:"],["bits",""]]};
