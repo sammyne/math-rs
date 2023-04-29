@@ -166,8 +166,6 @@ fn set_string() {
 
     let good_test_vector = vec![new_good("0x9a4e", 0, 39502)];
 
-    println!("-----------");
-    println!("testing good cases");
     for (i, c) in good_test_vector.iter().enumerate() {
         tmp.set_int64(1234567890);
 

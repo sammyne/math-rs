@@ -345,7 +345,6 @@ fn bit_set() {
 
     let mut i = 0;
     for c in BITWISE_TESTS.iter() {
-        println!("i = {i}");
         let x = int_from_str(c.x, None);
         test_bitset(&x);
 
@@ -354,7 +353,6 @@ fn bit_set() {
         i += 1;
     }
 
-    println!("------------how do you do");
     for (i, c) in bitset_test_vector.iter().enumerate() {
         let x = int_from_str(c.x, None);
         assert_eq!(x.bit(c.i), c.b, "#{i} x={x}");
@@ -1653,7 +1651,6 @@ fn mul_bytes(x: &[u8], y: &[u8]) -> Vec<u8> {
             }
             z[k] = carry as u8;
         }
-        println!("j={j}, k0={k0}, x.len()={}", x.len());
         k0 -= 1;
     }
 
@@ -1706,7 +1703,6 @@ fn test_bitset(x: &Int) {
     let z = x.clone();
     let z1 = x.clone();
 
-    println!("x = {x}");
     for i in 0..(n + 10) {
         let old = z.bit(i);
         let old1 = alt_bit(&z1, i);
