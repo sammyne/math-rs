@@ -3,9 +3,11 @@ use std::{
     ops::{Neg, Not},
 };
 
-use num_bigint::{BigInt, Sign};
+use num_bigint::{BigInt, BigUint, Sign};
 use num_integer::Integer;
 use num_traits::{One, Pow, Signed, Zero};
+
+use crate::big::MAX_BASE;
 
 lazy_static::lazy_static! {
   static ref INT_ONE: Int = Int(BigInt::from(1i8));
@@ -59,7 +61,7 @@ impl Int {
     /// `self.text(base)`, to `buf` and returns the extended buffer.
     pub fn append(&mut self, buf: Vec<u8>, base: u32) -> Vec<u8> {
         let mut out = buf;
-        out.extend(self.text(base).as_bytes());
+        out.extend(self.text(base as u8).as_bytes());
         out
     }
 
@@ -481,7 +483,7 @@ impl Int {
         self
     }
 
-    /// Sets `z = ^x` and returns `self`.
+    /// Sets `self = ^x` and returns `self`.
     pub fn not(&mut self, x: &Self) -> &mut Self {
         self.0 = x.0.clone().not();
         self
@@ -713,18 +715,36 @@ impl Int {
     #[doc = include_str!("../../../examples/big_int_set_string.rs")]
     /// ```
     pub fn set_string(&mut self, s: &str, base: u8) -> Option<&mut Self> {
+        if s.is_empty() || !((base == 0) || ((2 <= base) && (base <= MAX_BASE))) {
+            return None;
+        }
+
         let (s, sign) = if let Some(ss) = s.strip_prefix('-') {
             (ss, Sign::Minus)
+        } else if let Some(ss) = s.strip_prefix('+') {
+            (ss, Sign::Plus)
         } else {
             (s, Sign::Plus)
         };
 
+        if s == "0" {
+            // "0"/"-0"/"+0"
+            return Some(self.set_int64(0));
+        }
+
         if base != 0 {
-            let v = BigInt::parse_bytes(s.as_bytes(), base as u32)?;
-            self.0 = if sign != Sign::Minus { v } else { v.neg() };
+            self.0 = match scan_disallowing_underscores(s.as_bytes(), base) {
+                Ok(v) => BigInt::from_biguint(sign, v),
+                Err(_) => {
+                    //println!("scan '{s}' for base={base} failed: {err}");
+                    return None;
+                }
+            };
+
             return Some(self);
         }
 
+        let mut has_base_prefix = true;
         let (s, base) = if let Some(s) = s.strip_prefix("0b") {
             (s, 2)
         } else if let Some(s) = s.strip_prefix("0B") {
@@ -737,12 +757,24 @@ impl Int {
             (s, 16)
         } else if let Some(s) = s.strip_prefix("0X") {
             (s, 16)
+        } else if let Some(s) = s.strip_prefix('0') {
+            (s, 8)
         } else {
+            has_base_prefix = false;
             (s, 10)
         };
 
-        let v = BigInt::parse_bytes(s.as_bytes(), base as u32)?;
-        self.0 = if sign != Sign::Minus { v } else { v.neg() };
+        if s.is_empty() {
+            return None;
+        }
+
+        self.0 = match scan_allowing_underscores(s.as_bytes(), base, has_base_prefix) {
+            Ok(v) => BigInt::from_biguint(sign, v),
+            Err(_) => {
+                //println!("scan '{s}' failed: {err}");
+                return None;
+            }
+        };
 
         Some(self)
     }
@@ -798,10 +830,10 @@ impl Int {
     /// lower-case letters 'a' to 'z' for digit values 10 to 35, and
     /// the upper-case letters 'A' to 'Z' for digit values 36 to 61.
     /// No prefix (such as "0x") is added to the string.
-    pub fn text(&self, base: u32) -> String {
+    pub fn text(&self, base: u8) -> String {
         // this is different from golang.
         // assert_eq!((base >= 2) && (base <= 36), "bad base");
-        self.0.to_str_radix(base)
+        self.0.to_str_radix(base as u32)
     }
 
     /// Returns the number of consecutive least significant zero
@@ -976,3 +1008,80 @@ pub fn jacobi(x: &Int, y: &Int) -> i32 {
 //
 //    let nm3 = nm1 - 2;
 //}
+
+fn new_lookup_table(base: u8) -> [u8; 128] {
+    let mut out = [0xffu8; 128];
+
+    for c in b'0'..=b'9'.min(b'0' + base - 1) {
+        out[c as usize] = c - b'0';
+    }
+
+    if base <= 10 {
+        return out;
+    }
+
+    if base <= 36 {
+        let x = base - 10;
+        for c in b'a'..(b'a' + x) {
+            out[c as usize] = c - b'a' + 10;
+        }
+
+        for c in b'A'..(b'A' + x) {
+            out[c as usize] = c - b'A' + 10;
+        }
+    } else {
+        let x = base - 36;
+        for c in b'a'..(b'a' + x) {
+            out[c as usize] = c - b'a' + 10;
+        }
+
+        for c in b'A'..(b'A' + x) {
+            out[c as usize] = c - b'A' + 36;
+        }
+    }
+
+    out
+}
+
+fn scan_allowing_underscores(s: &[u8], base: u8, has_base_prefix: bool) -> Result<BigUint, String> {
+    let lookup = new_lookup_table(base);
+
+    let mut saw = if has_base_prefix { '0' } else { '_' };
+    let mut out = BigUint::default();
+    for (i, &c) in s.iter().enumerate() {
+        if c == b'_' {
+            if saw != '0' {
+                return Err(format!("bad '_' at index {i}"));
+            }
+            saw = '_';
+            continue;
+        }
+
+        match lookup[c as usize] {
+            0xff => return Err(format!("bad digit '{}' at index {i}", c as char)),
+            d => {
+                out = out * base + d;
+                saw = '0';
+            }
+        }
+    }
+
+    if saw == '_' {
+        return Err(format!("bad '_' at the end"));
+    }
+
+    Ok(out)
+}
+
+fn scan_disallowing_underscores(s: &[u8], base: u8) -> Result<BigUint, String> {
+    let lookup = new_lookup_table(base);
+    let mut out = BigUint::default();
+    for (i, &c) in s.iter().enumerate() {
+        match lookup[c as usize] {
+            0xff => return Err(format!("bad digit '{c}' at index {i}")),
+            d => out = out * base + d,
+        }
+    }
+
+    Ok(out)
+}

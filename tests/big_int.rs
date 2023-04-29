@@ -4,6 +4,8 @@ use strconv::NumErrorCause;
 
 mod helper;
 
+use helper::is_big_int_normalized as is_normalized;
+
 lazy_static::lazy_static! {
   static ref BITWISE_TESTS: Vec<BitwiseTest> = vec![
     BitwiseTest::new("0x00", "0x00", "0x00", "0x00", "0x00", "0x00"),
@@ -341,14 +343,18 @@ fn bit_set() {
         new_case("-0x2000000000000000000000000001", 110, 1),
     ];
 
+    let mut i = 0;
     for c in BITWISE_TESTS.iter() {
+        println!("i = {i}");
         let x = int_from_str(c.x, None);
         test_bitset(&x);
 
         let y = int_from_str(c.y, None);
         test_bitset(&y);
+        i += 1;
     }
 
+    println!("------------how do you do");
     for (i, c) in bitset_test_vector.iter().enumerate() {
         let x = int_from_str(c.x, None);
         assert_eq!(x.bit(c.i), c.b, "#{i} x={x}");
@@ -1628,13 +1634,6 @@ fn int_from_str(s: &str, base: Option<u8>) -> Int {
     out.set_string(s, base.unwrap_or_default())
         .expect("set_string");
     out
-}
-
-fn is_normalized(x: &Int) -> bool {
-    match x.bits().next_back() {
-        None => x.sign() == 0,
-        Some(v) => v != 0,
-    }
 }
 
 fn mul_bytes(x: &[u8], y: &[u8]) -> Vec<u8> {
