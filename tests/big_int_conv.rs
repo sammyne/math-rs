@@ -98,6 +98,21 @@ impl StringTest {
 }
 
 #[test]
+fn append_text() {
+    let mut z = Int::default();
+    for c in STRING_TESTS.iter().filter(|v| v.ok) {
+        let _ = z
+            .set_string(c.input, c.base)
+            .expect(&format!("{}: failed to parse", c.input));
+        let base = if c.base == 0 { 10 } else { c.base };
+
+        let buf = z.append(vec![], base);
+        let got = String::from_utf8_lossy(buf.as_slice());
+        assert_eq!(got, c.output, "{}", c.input);
+    }
+}
+
+#[test]
 fn set_string() {
     let mut tmp = Int::default();
     for (i, c) in STRING_TESTS.iter().enumerate() {

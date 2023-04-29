@@ -343,14 +343,12 @@ fn bit_set() {
         new_case("-0x2000000000000000000000000001", 110, 1),
     ];
 
-    let mut i = 0;
     for c in BITWISE_TESTS.iter() {
         let x = int_from_str(c.x, None);
         test_bitset(&x);
 
         let y = int_from_str(c.y, None);
         test_bitset(&y);
-        i += 1;
     }
 
     for (i, c) in bitset_test_vector.iter().enumerate() {
