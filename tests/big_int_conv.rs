@@ -113,6 +113,38 @@ fn append_text() {
 }
 
 #[test]
+fn get_string() {
+    let mut z = Int::default();
+    for (i, c) in STRING_TESTS.iter().enumerate().filter(|(_, v)| v.ok) {
+        z.set_int64(c.val);
+
+        if c.base == 10 {
+            assert_eq!(
+                z.string(),
+                c.output,
+                "#{i} input={}, val={}",
+                c.input,
+                c.val
+            );
+        }
+
+        let got = match c.base {
+            2 => format!("{z:b}"),
+            8 => format!("{z:o}"),
+            16 => format!("{z:x}"),
+            10 => format!("{z}"),
+            _ => continue,
+        };
+
+        assert_eq!(
+            got, c.output,
+            "#{i} input={}, val={} format on base={}",
+            c.input, c.val, c.base
+        );
+    }
+}
+
+#[test]
 fn set_string() {
     let mut tmp = Int::default();
     for (i, c) in STRING_TESTS.iter().enumerate() {

@@ -1,5 +1,5 @@
 use std::{
-    fmt::Display,
+    fmt::{Binary, Display, LowerHex, Octal, UpperHex},
     ops::{Neg, Not},
 };
 
@@ -44,9 +44,35 @@ lazy_static::lazy_static! {
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Int(BigInt);
 
+impl Binary for Int {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0.to_str_radix(2))
+    }
+}
+
 impl Display for Int {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
+    }
+}
+
+impl LowerHex for Int {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0.to_str_radix(16))
+    }
+}
+
+impl Octal for Int {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0.to_str_radix(8))
+    }
+}
+
+impl UpperHex for Int {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut s = self.0.to_str_radix(16);
+        s.make_ascii_uppercase();
+        write!(f, "{}", s)
     }
 }
 
