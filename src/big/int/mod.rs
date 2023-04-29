@@ -11,6 +11,24 @@ use crate::big::MAX_BASE;
 
 lazy_static::lazy_static! {
   static ref INT_ONE: Int = Int(BigInt::from(1i8));
+
+  static ref INVERSE_LOOKUP_TABLE: [u8; MAX_BASE as usize] = {
+    let mut out = [0xffu8; MAX_BASE as usize];
+
+    for c in b'0'..=b'9' {
+        out[(c-b'0') as usize] = c;
+    }
+
+    for c in b'a'..=b'z' {
+        out[(c-b'a') as usize + 10] = c;
+    }
+
+    for c in b'A'..=b'Z' {
+        out[(c-b'A') as usize + 36] = c;
+    }
+
+    out
+  };
 }
 
 //const W: usize = crate::bits::UINT_SIZE;
@@ -275,7 +293,6 @@ impl Int {
         let b = self.bytes();
 
         assert!(out.len() >= b.len(), "buf too small");
-        println!("out.len = {}, b.len = {}", out.len(), b.len());
 
         out.fill(0);
 
@@ -826,14 +843,36 @@ impl Int {
     }
 
     /// Returns the string representation of `self` in the given base.
-    /// Base must be between 2 and 62, inclusive. The result uses the
+    /// Base must be between 2 and [MAX_BASE][crate::big::MAX_BASE], inclusive. The result uses the
     /// lower-case letters 'a' to 'z' for digit values 10 to 35, and
     /// the upper-case letters 'A' to 'Z' for digit values 36 to 61.
     /// No prefix (such as "0x") is added to the string.
     pub fn text(&self, base: u8) -> String {
-        // this is different from golang.
-        // assert_eq!((base >= 2) && (base <= 36), "bad base");
-        self.0.to_str_radix(base as u32)
+        assert!((base >= 2) && (base <= MAX_BASE), "bad base not in range [2, {}]", MAX_BASE);
+
+        if self.0.is_zero() {
+            return "0".to_string();
+        }
+
+        let mut v = self.0.clone();
+        let mut buf = vec![];
+
+        while !v.is_zero() {
+            let w: usize = {
+                let(_, b)=(&v % base).to_bytes_le();
+                b[0] as usize
+            };
+            buf.push(INVERSE_LOOKUP_TABLE[w]);
+            v = v / base;
+        }
+
+        if self.0.is_negative(){
+            buf.push(b'-');
+        }
+
+        buf.reverse();
+
+        unsafe { String::from_utf8_unchecked(buf) }
     }
 
     /// Returns the number of consecutive least significant zero
